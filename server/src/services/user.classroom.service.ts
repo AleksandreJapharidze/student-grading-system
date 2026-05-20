@@ -36,7 +36,7 @@ export async function addStudentToClassroom(request: Request, response: Response
 
 export async function addTeacherToClassroom(request: Request, response: Response, next: NextFunction) {
     try {
-        const teacherId: number = parseInt(<string>request.params.studentId)
+        const teacherId: number = parseInt(<string>request.params.teacherId)
         const teacher: UserEntity | null = await userRepository.findOne({where: {id: teacherId, role: "teacher"}});
 
         if (!teacher) {
@@ -84,7 +84,7 @@ export async function removeStudentFromClassroom(request: Request, response: Res
 
 export async function removeTeacherFromClassroom(request: Request, response: Response, next: NextFunction) {
     try {
-        const teacherId: number = parseInt(<string>request.params.studentId);
+        const teacherId: number = parseInt(<string>request.params.teacherId);
         const teacher: UserEntity | null = await userRepository.findOne({where: {id: teacherId, role: "teacher"}});
 
         if (!teacher) {

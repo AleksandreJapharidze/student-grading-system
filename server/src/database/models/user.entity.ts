@@ -19,7 +19,10 @@ export class UserEntity {
     @OneToMany(() => AssignmentSubmissionEntity, assignmentSubmission => assignmentSubmission.student)
     assignmentSubmissions: AssignmentSubmissionEntity[]
 
-    @ManyToOne(() => ClassroomEntity, classroom => classroom.users, {nullable: true})
+    @ManyToOne(() => ClassroomEntity, classroom => classroom.users, {
+        nullable: true,
+        onDelete: "SET NULL"
+    })
     @JoinColumn({ name: 'classroomId' })
     classroom: ClassroomEntity | null
 }

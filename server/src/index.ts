@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
 
-import {createClass, getClass, getClassByStudentId, getClasses} from "./services/classroom.service";
+import {createClass, deleteClass, getClass, getClassByStudentId} from "./services/classroom.service";
 import {AppDataSource} from "./config/type-orm-config";
 import {createStudent, getStudentById, getStudents, getStudentsByClassroomId} from "./services/student.service";
 import {addStudentToClassroom, addTeacherToClassroom, removeStudentFromClassroom, removeTeacherFromClassroom} from "./services/user.classroom.service";
@@ -34,6 +34,8 @@ app.get("/api/teachers/:teacherId/classroom", getClassByStudentId);
 app.get("/api/classroom", getClass);
 
 app.post("/api/classroom", createClass);
+
+app.delete("/api/classroom/", deleteClass)
 
 app.get("/api/classroom/students", getStudentsByClassroomId);
 

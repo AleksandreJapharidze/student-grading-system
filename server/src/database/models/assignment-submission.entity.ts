@@ -13,7 +13,10 @@ export class AssignmentSubmissionEntity {
     @CreateDateColumn({nullable: false, type: "datetime"})
     turnInDate: Date
 
-    @ManyToOne(() => AssignmentEntity, assignment => assignment.submissions)
+    @ManyToOne(() => AssignmentEntity, assignment => assignment.submissions, {
+        nullable: true,
+        onDelete: "SET NULL"
+    })
     @JoinColumn({name: "assignmentId"})
     assignment: AssignmentEntity
 
