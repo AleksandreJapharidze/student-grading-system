@@ -16,7 +16,7 @@ type StudentRequest = {
     role: string;
 }
 
-async function getStudents(request: Request, response: Response, next: NextFunction) {
+export async function getStudents(request: Request, response: Response, next: NextFunction) {
     try {
         const students: Student[] = await userRepository.find({where: {role: "student"}});
         return response.status(200).json(students);
@@ -25,7 +25,7 @@ async function getStudents(request: Request, response: Response, next: NextFunct
     }
 }
 
-async function getStudentById(request: Request, response: Response, next: NextFunction) {
+export async function getStudentById(request: Request, response: Response, next: NextFunction) {
     try {
         const id: number = parseInt(<string>request.params.studentId);
         const student: Student | null = await userRepository.findOne({where: {id: id, role: "student"}});
@@ -38,7 +38,7 @@ async function getStudentById(request: Request, response: Response, next: NextFu
     }
 }
 
-async function createStudent(request: Request, response: Response, next: NextFunction) {
+export async function createStudent(request: Request, response: Response, next: NextFunction) {
     try {
         const student: StudentRequest = request.body;
         const newStudent: UserEntity = userRepository.create(student);
@@ -49,7 +49,7 @@ async function createStudent(request: Request, response: Response, next: NextFun
     }
 }
 
-async function getStudentsByClassroomId(request: Request, response: Response, next: NextFunction) {
+export async function getStudentsByClassroomId(request: Request, response: Response, next: NextFunction) {
     try {
         const classroomId: number = 1;
         const students: Student[] = await userRepository.find({where: {classroom: {id: classroomId}, role: "student"}});
@@ -58,5 +58,3 @@ async function getStudentsByClassroomId(request: Request, response: Response, ne
         next(error);
     }
 }
-
-export {getStudents, getStudentById, createStudent, getStudentsByClassroomId};

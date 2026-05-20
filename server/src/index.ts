@@ -3,7 +3,8 @@ import express, { Request, Response, NextFunction } from "express";
 import {createClass, getClass, getClassByStudentId, getClasses} from "./services/classroom.service";
 import {AppDataSource} from "./config/type-orm-config";
 import {createStudent, getStudentById, getStudents, getStudentsByClassroomId} from "./services/student.service";
-import {addStudentToClassroom, removeStudentFromClassroom} from "./services/user.classroom.service";
+import {addStudentToClassroom, addTeacherToClassroom, removeStudentFromClassroom, removeTeacherFromClassroom} from "./services/user.classroom.service";
+import {getTeachers, getTeachersByClassroomId} from "./services/teacher.service";
 
 const app = express();
 
@@ -14,23 +15,37 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     res.status(500).send("Something went wrong!");
 });
 
-app.get("/api/classroom", getClass);
-
-app.get("/api/classroom/students", getStudentsByClassroomId)
-
-app.post("/api/classroom", createClass);
-
 app.get("/api/students", getStudents);
 
 app.get("/api/students/:studentId", getStudentById);
 
 app.post("/api/students", createStudent);
 
-app.get("/api/students/:studentId/classroom", getClassByStudentId)
+app.get("/api/students/:studentId/classroom", getClassByStudentId);
+
+app.get("/api/teachers", getTeachers);
+
+app.get("/api/teachers/:teacherId", getStudentById);
+
+app.post("/api/teachers", createStudent);
+
+app.get("/api/teachers/:teacherId/classroom", getClassByStudentId);
+
+app.get("/api/classroom", getClass);
+
+app.post("/api/classroom", createClass);
+
+app.get("/api/classroom/students", getStudentsByClassroomId);
+
+app.get("/api/classroom/teachers", getTeachersByClassroomId);
 
 app.patch("/api/classroom/students/:studentId", addStudentToClassroom);
 
-app.delete("/api/classroom/students/:studentId", removeStudentFromClassroom)
+app.delete("/api/classroom/students/:studentId", removeStudentFromClassroom);
+
+app.patch("/api/classroom/teachers/:teacherId", addTeacherToClassroom);
+
+app.delete("/api/classroom/teachers/:teacherId", removeTeacherFromClassroom);
 
 AppDataSource.initialize()
     .then(() => {

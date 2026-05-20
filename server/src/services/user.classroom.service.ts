@@ -8,25 +8,22 @@ import {ClassroomEntity} from "../database/models/classroom.entity";
 
 export async function addStudentToClassroom(request: Request, response: Response, next: NextFunction) {
     try {
-        const classroom: ClassroomEntity | null = await classroomRepository.findOne({where: {id: 1}});
-
-        if (!classroom) {
-            return response.status(404).json({message: "Classroom not found"});
-        }
 
         const studentId: number = parseInt(<string>request.params.studentId)
-        const student: UserEntity | null = await userRepository.findOne({where: {id: studentId}});
+        const student: UserEntity | null = await userRepository.findOne({where: {id: studentId, role: "student"}});
 
         if (!student) {
             return response.status(404).json({message: "Student not found"});
         }
 
-        if (student.role !== "student") {
-            return response.status(400).json({message: "Student must have a role of 'student'"});
-        }
-
         if (student.classroom) {
             return response.status(400).json({message: "Student is already in a classroom"});
+        }
+
+        const classroom: ClassroomEntity | null = await classroomRepository.findOne({where: {id: 1}});
+
+        if (!classroom) {
+            return response.status(404).json({message: "Classroom not found"});
         }
 
         student.classroom = classroom;
@@ -37,17 +34,40 @@ export async function addStudentToClassroom(request: Request, response: Response
     }
 }
 
+export async function addTeacherToClassroom(request: Request, response: Response, next: NextFunction) {
+    try {
+        const teacherId: number = parseInt(<string>request.params.studentId)
+        const teacher: UserEntity | null = await userRepository.findOne({where: {id: teacherId, role: "teacher"}});
+
+        if (!teacher) {
+            return response.status(404).json({message: "Teacher not found"});
+        }
+
+        if (teacher.classroom) {
+            return response.status(400).json({message: "Teacher is already in a classroom"});
+        }
+
+        const classroom: ClassroomEntity | null = await classroomRepository.findOne({where: {id: 1}});
+
+        if (!classroom) {
+            return response.status(404).json({message: "Classroom not found"});
+        }
+
+        teacher.classroom = classroom;
+        await userRepository.save(teacher);
+        return response.status(200).send("Teacher added to classroom successfully.");
+    } catch (error) {
+        next(error);
+    }
+}
+
 export async function removeStudentFromClassroom(request: Request, response: Response, next: NextFunction) {
     try {
         const studentId: number = parseInt(<string>request.params.studentId);
-        const student: UserEntity | null = await userRepository.findOne({where: {id: studentId}});
+        const student: UserEntity | null = await userRepository.findOne({where: {id: studentId, role: "student"}});
 
         if (!student) {
             return response.status(404).json({message: "Student not found"});
-        }
-
-        if (student.role !== "student") {
-            return response.status(400).json({message: "Student must have a role of 'student'"});
         }
 
         if (student.classroom === null) {
@@ -57,6 +77,27 @@ export async function removeStudentFromClassroom(request: Request, response: Res
         student.classroom = null;
         await userRepository.save(student);
         return response.status(200).send("Student removed from classroom successfully.");
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function removeTeacherFromClassroom(request: Request, response: Response, next: NextFunction) {
+    try {
+        const teacherId: number = parseInt(<string>request.params.studentId);
+        const teacher: UserEntity | null = await userRepository.findOne({where: {id: teacherId, role: "teacher"}});
+
+        if (!teacher) {
+            return response.status(404).json({message: "Teacher not found"});
+        }
+
+        if (teacher.classroom === null) {
+            return response.status(400).json({message: "Teacher is not in a classroom"});
+        }
+
+        teacher.classroom = null;
+        await userRepository.save(teacher);
+        return response.status(200).send("Teacher removed from classroom successfully.");
     } catch (error) {
         next(error);
     }
