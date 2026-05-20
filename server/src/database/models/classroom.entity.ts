@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne } from 'typeorm';
 
 import {UserEntity} from "./user.entity"
 import {AssignmentEntity} from "./assignment.entity";
@@ -11,9 +11,15 @@ export class ClassroomEntity {
     @Column({nullable: false, type: "varchar"})
     name: string;
 
-    @OneToMany(() => UserEntity, user => user.classroom)
+    @OneToMany(() => UserEntity, user => user.classroom, {
+        cascade: true,
+        orphanedRowAction: "nullify"
+    })
     users: UserEntity[];
 
-    @OneToMany(() => AssignmentEntity, assignment => assignment.classroom)
+    @OneToMany(() => AssignmentEntity, assignment => assignment.classroom, {
+        cascade: true,
+        orphanedRowAction: "delete"
+    })
     assignments: AssignmentEntity[];
 }

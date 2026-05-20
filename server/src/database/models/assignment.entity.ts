@@ -17,6 +17,9 @@ export class AssignmentEntity {
     @JoinColumn({ name: "classroomId" })
     classroom: ClassroomEntity;
 
-    @OneToMany(() => AssignmentSubmissionEntity, submission => submission.assignment)
+    @OneToMany(() => AssignmentSubmissionEntity, submission => submission.assignment, {
+        cascade: true,
+        orphanedRowAction: "nullify"
+    })
     submissions: AssignmentSubmissionEntity[];
 }
