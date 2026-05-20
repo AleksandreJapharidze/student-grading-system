@@ -44,5 +44,8 @@
     "forceConsistentCasingInFileNames": true,
      "resolveJsonModule": true,
     "skipDefaultLibCheck": true,
+    "strictPropertyInitialization": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
   }
 }
