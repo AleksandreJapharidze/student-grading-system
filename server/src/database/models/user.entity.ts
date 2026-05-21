@@ -13,6 +13,9 @@ export class UserEntity {
     @Column({nullable: false, type: "varchar"})
     email: string
 
+    @Column({nullable: false, type: "varchar", select: false})
+    password: string
+
     @Column({nullable: false, type: "varchar"})
     role: string
 
