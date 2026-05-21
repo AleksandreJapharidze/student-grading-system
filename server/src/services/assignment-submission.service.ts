@@ -59,8 +59,8 @@ export async function submitAssignment(request: Request, response: Response, nex
             student,
         });
 
-        const savedSubmission = await assignmentSubmissionRepository.save(submission);
-        return response.status(201).json(savedSubmission);
+        await assignmentSubmissionRepository.save(submission);
+        return response.status(201).json({message: "Assignment submitted successfully"});
     } catch (error) {
         next(error);
     }
@@ -177,8 +177,8 @@ export async function gradeSubmission(request: Request, response: Response, next
         }
 
         submission.grade = grade;
-        const updatedSubmission = await assignmentSubmissionRepository.save(submission);
-        return response.status(200).json(updatedSubmission);
+        await assignmentSubmissionRepository.save(submission);
+        return response.status(200).json({message: "Grade updated successfully"});
     } catch (error) {
         next(error);
     }

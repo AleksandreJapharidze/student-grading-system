@@ -11,12 +11,20 @@ export async function registerStudent(request: Request, response: Response, next
         const {name} = request.body;
         const {email} = request.body;
 
+        if (!name || !email) {
+            return response.status(400).json({message: "Name and email are required"});
+        }
+
         const studentExists: UserEntity | null = await userRepository.findOne({where: {email: email}});
         if (studentExists) {
             return response.status(400).json({message: "User with this email is already registered"});
         }
 
         const {password} = request.body;
+
+        if (!password) {
+            return response.status(400).json({message: "Password is required"});
+        }
 
         const hashedPassword: string = await bcrypt.hash(password, 10);
         const newStudent: UserEntity = userRepository.create({name, email, password: hashedPassword, role: "student"});
@@ -32,6 +40,10 @@ export async function login(request: Request, response: Response, next: NextFunc
     try {
         const {email} = request.body;
         const {password} = request.body;
+
+        if (!email || !password) {
+            return response.status(400).json({message: "Email and password are required"});
+        }
 
         const user: UserEntity | null = await userRepository.findOne({where: {email: email}, select: {id: true, email: true, password: true, role: true}});
         if (!user) {
@@ -56,12 +68,20 @@ export async function registerTeacher(request: Request, response: Response, next
         const {name} = request.body;
         const {email} = request.body;
 
+        if (!name || !email) {
+            return response.status(400).json({message: "Name and email are required"});
+        }
+
         const teacherExists: UserEntity | null = await userRepository.findOne({where: {email: email}});
         if (teacherExists) {
             return response.status(400).json({message: "User with this email is already registered"});
         }
 
         const {password} = request.body;
+
+        if (!password) {
+            return response.status(400).json({message: "Password is required"});
+        }
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const newTeacher: UserEntity = userRepository.create({name, email, password: hashedPassword, role: "teacher"});

@@ -5,6 +5,7 @@ import {classroomRepository} from "../database/repositories/classroom.repository
 import {userRepository} from "../database/repositories/user.repository";
 import {AssignmentEntity} from "../database/models/assignment.entity";
 import {JwtPayload, verifyToken} from "../util/jwt.util";
+import {ClassroomEntity} from "../database/models/classroom.entity";
 
 export async function createAssignment(request: Request, response: Response, next: NextFunction) {
     try {
@@ -48,7 +49,7 @@ export async function createAssignment(request: Request, response: Response, nex
         });
 
         const savedAssignment = await assignmentRepository.save(assignment);
-        return response.status(201).json(savedAssignment);
+        return response.status(201).json({message: "Assignment created successfully"});
     } catch (error) {
         next(error);
     }
@@ -56,7 +57,17 @@ export async function createAssignment(request: Request, response: Response, nex
 
 export async function getAssignmentsByClassroomId(request: Request, response: Response, next: NextFunction) {
     try {
-        const classroomId: number = 1;
+        const classes: ClassroomEntity[] = await classroomRepository.find();
+        if (classes.length === 0) {
+            return response.status(404).json({message: "No classroom found"});
+        }
+
+        const classroom: ClassroomEntity | null | undefined = classes[0];
+        if (!classroom) {
+            return response.status(404).json({message: "Classroom not found"});
+        }
+
+        const classroomId: number = classroom.id;
         const assignments: AssignmentEntity[] = await assignmentRepository.find({
             where: {classroom: {id: classroomId}},
         });

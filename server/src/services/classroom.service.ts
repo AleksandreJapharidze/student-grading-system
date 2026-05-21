@@ -36,6 +36,10 @@ export async function createClass(request: Request, response: Response, next: Ne
         }
 
         const {name} = request.body;
+        if (!name) {
+            return response.status(400).json({message: "Name is required"});
+        }
+
         const classroom: ClassroomEntity = classroomRepository.create({name});
         const savedClassroom = await classroomRepository.save(classroom);
         return response.status(201).json(savedClassroom);
@@ -46,8 +50,12 @@ export async function createClass(request: Request, response: Response, next: Ne
 
 export async function getClass(request: Request, response: Response, next: NextFunction) {
     try {
-        const id: number = 1;
-        const classroom: Classroom | null = await classroomRepository.findOne({where: {id}});
+        const classes: Classroom[] = await classroomRepository.find();
+        if (classes.length === 0) {
+            return response.status(404).json({message: "No classrooms found"});
+        } else if (classes.length > 1) {}
+
+        const classroom: Classroom | null | undefined = classes[0];
         if (!classroom) {
             return response.status(404).json({message: "Classroom not found"});
         }
@@ -64,7 +72,7 @@ export async function getClassByUserId(request: Request, response: Response, nex
             return response.status(401).json({message: "Unauthorized"});
         }
 
-        const userId: number = parseInt(<string>request.params.teacherId);
+        const userId: number = parseInt(<string>request.params.userId);
 
         if (decodedJwt.id !== userId) {
             return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});

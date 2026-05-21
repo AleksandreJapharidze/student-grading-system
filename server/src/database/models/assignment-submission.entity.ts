@@ -2,6 +2,8 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, Jo
 import {AssignmentEntity} from "./assignment.entity";
 import {UserEntity} from "./user.entity";
 
+import {Exclude} from "class-transformer";
+
 @Entity()
 export class AssignmentSubmissionEntity {
     @PrimaryGeneratedColumn()
@@ -18,9 +20,11 @@ export class AssignmentSubmissionEntity {
 
     @ManyToOne(() => AssignmentEntity, assignment => assignment.submissions, {
         nullable: true,
-        onDelete: "SET NULL"
+        onDelete: "SET NULL",
+        eager: false
     })
     @JoinColumn({name: "assignmentId"})
+    @Exclude()
     assignment: AssignmentEntity
 
     @ManyToOne(() => UserEntity, user => user.assignmentSubmissions)

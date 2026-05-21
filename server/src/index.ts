@@ -35,7 +35,7 @@ app.get("/api/teachers", getTeachers);
 
 app.get("/api/teachers/:teacherId", getTeacherById);
 
-app.post("api/teachers/register", registerTeacher);
+app.post("/api/teachers/register", registerTeacher);
 
 app.get("/api/classroom", getClass);
 
