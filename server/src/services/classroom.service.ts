@@ -15,6 +15,21 @@ async function getNumberOfClasses() {
 
 export async function createClass(request: Request, response: Response, next: NextFunction) {
     try {
+        const decodedJwt: JwtPayload | null = await verifyToken(request);
+        if (!decodedJwt) {
+            return response.status(401).json({message: "Unauthorized"});
+        }
+
+        if (decodedJwt.role !== "admin" && decodedJwt.role !== "teacher") {
+            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+        }
+
+        console.log(
+            "decodedJwt.role: ", decodedJwt.role,
+            "decodedJwt.id: ", decodedJwt.id,
+            "decodedJwt.email: ", decodedJwt.email
+        )
+
         const numberOfClasses: number = await getNumberOfClasses();
         if (numberOfClasses > 0) {
             return response.status(400).json({message: "Classroom already exists"});
