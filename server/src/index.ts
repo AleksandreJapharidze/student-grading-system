@@ -1,11 +1,11 @@
 import express, { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 
-import {createClass, deleteClass, getClass, getClassByStudentId} from "./services/classroom.service";
+import {createClass, deleteClass, getClass, getClassByUserId} from "./services/classroom.service";
 import {AppDataSource} from "./config/type-orm-config";
 import {createStudent, getStudentById, getStudents, getStudentsByClassroomId} from "./services/student.service";
 import {addStudentToClassroom, addTeacherToClassroom, removeStudentFromClassroom, removeTeacherFromClassroom} from "./services/user.classroom.service";
-import {getTeachers, getTeachersByClassroomId} from "./services/teacher.service";
+import {createTeacher, getTeacherById, getTeachers, getTeachersByClassroomId} from "./services/teacher.service";
 import {login, registerStudent, registerTeacher} from "./services/auth.service";
 
 dotenv.config({path: "../.env"});
@@ -27,17 +27,11 @@ app.get("/api/students/:studentId", getStudentById);
 
 app.post("/api/students", createStudent);
 
-app.get("/api/students/:studentId/classroom", getClassByStudentId);
-
 app.post("/api/students/register", registerStudent);
 
 app.get("/api/teachers", getTeachers);
 
-app.get("/api/teachers/:teacherId", getStudentById);
-
-app.post("/api/teachers", createStudent);
-
-app.get("/api/teachers/:teacherId/classroom", getClassByStudentId);
+app.get("/api/teachers/:teacherId", getTeacherById);
 
 app.post("api/teachers/register", registerTeacher);
 
@@ -58,6 +52,9 @@ app.delete("/api/classroom/students/:studentId", removeStudentFromClassroom);
 app.patch("/api/classroom/teachers/:teacherId", addTeacherToClassroom);
 
 app.delete("/api/classroom/teachers/:teacherId", removeTeacherFromClassroom);
+
+// This is important! User role doesn't matter when getting classroom, whether it's student or teacher.
+app.get("/api/users/:userId/classroom", getClassByUserId);
 
 AppDataSource.initialize()
     .then(() => {

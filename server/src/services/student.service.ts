@@ -2,6 +2,7 @@ import {NextFunction, Response, Request} from "express";
 
 import {userRepository} from "../database/repositories/user.repository"
 import {UserEntity} from "../database/models/user.entity";
+import {JwtPayload, verifyToken} from "../util/jwt.util";
 
 type Student = {
     id: number;
@@ -27,7 +28,18 @@ export async function getStudents(request: Request, response: Response, next: Ne
 
 export async function getStudentById(request: Request, response: Response, next: NextFunction) {
     try {
+        const decodedJwt: JwtPayload | null = await verifyToken(request);
+
+        if (!decodedJwt) {
+            return response.status(401).json({message: "Unauthorized"});
+        }
+
         const id: number = parseInt(<string>request.params.studentId);
+
+        if (decodedJwt.id !== id || decodedJwt.role !== "student") {
+            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+        }
+
         const student: Student | null = await userRepository.findOne({where: {id: id, role: "student"}});
         if (!student) {
             return response.status(404).json({message: "Student not found"});

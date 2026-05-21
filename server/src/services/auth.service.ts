@@ -20,7 +20,8 @@ export async function registerStudent(request: Request, response: Response, next
 
         const hashedPassword: string = await bcrypt.hash(password, 10);
         const newStudent: UserEntity = userRepository.create({name, email, password: hashedPassword, role: "student"});
-        const savedStudent: UserEntity = await userRepository.save(newStudent);
+        await userRepository.save(newStudent);
+
         return response.status(201).send({message: "Student registered successfully"});
     } catch (error) {
         next(error);
@@ -37,7 +38,7 @@ export async function login(request: Request, response: Response, next: NextFunc
             return response.status(401).json({message: "Invalid email. User not found"});
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+        const isPasswordValid: boolean = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             return response.status(401).json({message: "Invalid password"});
         }

@@ -2,6 +2,7 @@ import {NextFunction, Response, Request} from "express";
 
 import {classroomRepository} from "../database/repositories/classroom.repository"
 import {ClassroomEntity} from "../database/models/classroom.entity";
+import {JwtPayload, verifyToken} from "../util/jwt.util";
 
 type Classroom = {
     id: number;
@@ -41,10 +42,20 @@ export async function getClass(request: Request, response: Response, next: NextF
     }
 }
 
-export async function getClassByStudentId(request: Request, response: Response, next: NextFunction) {
+export async function getClassByUserId(request: Request, response: Response, next: NextFunction) {
     try {
-        const studentId: number = parseInt(<string>request.params.teacherId);
-        const classroom: Classroom | null = await classroomRepository.findOne({where: {users: {id: studentId}}});
+        const decodedJwt: JwtPayload | null = await verifyToken(request);
+        if (!decodedJwt) {
+            return response.status(401).json({message: "Unauthorized"});
+        }
+
+        const userId: number = parseInt(<string>request.params.teacherId);
+
+        if (decodedJwt.id !== userId) {
+            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+        }
+
+        const classroom: Classroom | null = await classroomRepository.findOne({where: {users: {id: userId}}});
         if (!classroom) {
             return response.status(404).json({message: "Classroom not found"});
         }
