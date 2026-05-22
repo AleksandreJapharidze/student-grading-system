@@ -16,8 +16,11 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const app = express();
 
-
-app.use(cors({ origin: "http://localhost:5173" }));
+const corsOptions = {
+    origin: "http://localhost:5173",
+    credentials: true,
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
