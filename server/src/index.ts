@@ -2,8 +2,6 @@ import cors from "cors";
 import express, { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 
-dotenv.config();
-
 import {createClass, deleteClass, getClass, getClassByUserId} from "./services/classroom.service";
 import {AppDataSource} from "./config/type-orm-config";
 import {createStudent, getStudentById, getStudents, getStudentsByClassroomId} from "./services/student.service";
@@ -13,8 +11,16 @@ import {login, registerStudent, registerTeacher} from "./services/auth.service";
 import {createAssignment, deleteAssignment, getAssignmentById, getAssignmentsByClassroomId} from "./services/assignment.service";
 import {getSubmissionsByAssignmentId, getSubmissionsByStudentId, gradeSubmission, submitAssignment} from "./services/assignment-submission.service";
 
+dotenv.config({path: "../.env"});
+
 const app = express();
-app.use(cors());
+
+const corsOptions = {
+    origin: "http://localhost:5173",
+    methods: ["GET,HEAD,PUT,PATCH,POST,DELETE"],
+    credentials: true,
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
