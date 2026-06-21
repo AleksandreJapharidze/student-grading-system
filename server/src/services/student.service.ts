@@ -34,6 +34,8 @@ export async function getStudentById(request: Request, response: Response, next:
             return response.status(401).json({message: "Unauthorized"});
         }
 
+        console.log(decodedJwt);
+
         const id: number = parseInt(<string>request.params.studentId);
 
         if (decodedJwt.id !== id || decodedJwt.role !== "student") {

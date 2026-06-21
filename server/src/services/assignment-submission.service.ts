@@ -2,9 +2,70 @@ import {NextFunction, Response, Request} from "express";
 
 import {assignmentRepository} from "../database/repositories/assignment.repository";
 import {assignmentSubmissionRepository} from "../database/repositories/assignment-submission.repository";
+import {submissionFilePathRepository} from "../database/repositories/submission-file-path.repository";
 import {userRepository} from "../database/repositories/user.repository";
 import {AssignmentSubmissionEntity} from "../database/models/assignment-submission.entity";
 import {JwtPayload, verifyToken} from "../util/jwt.util";
+
+// export async function submitAssignment(request: Request, response: Response, next: NextFunction) {
+//     try {
+//         const decodedJwt: JwtPayload | null = await verifyToken(request);
+//         if (!decodedJwt) {
+//             return response.status(401).json({message: "Unauthorized"});
+//         }
+
+//         if (decodedJwt.role !== "student") {
+//             return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+//         }
+
+//         const assignmentId: number = parseInt(<string>request.params.assignmentId);
+//         const {content} = request.body;
+
+//         const assignment = await assignmentRepository.findOne({
+//             where: {id: assignmentId},
+//             relations: {classroom: true},
+//         });
+
+//         if (!assignment) {
+//             return response.status(404).json({message: "Assignment not found"});
+//         }
+
+//         const student = await userRepository.findOne({
+//             where: {id: decodedJwt.id, role: "student"},
+//             relations: {classroom: true},
+//         });
+
+//         if (!student) {
+//             return response.status(404).json({message: "Student not found"});
+//         }
+
+//         if (!student.classroom || student.classroom.id !== assignment.classroom.id) {
+//             return response.status(403).json({message: "Access denied. You are not in this classroom."});
+//         }
+
+//         const existingSubmission = await assignmentSubmissionRepository.findOne({
+//             where: {
+//                 assignment: {id: assignmentId},
+//                 student: {id: decodedJwt.id},
+//             },
+//         });
+
+//         if (existingSubmission) {
+//             return response.status(400).json({message: "You have already submitted this assignment"});
+//         }
+
+//         const submission: AssignmentSubmissionEntity = assignmentSubmissionRepository.create({
+//             content: content ?? null,
+//             assignment,
+//             student,
+//         });
+
+//         await assignmentSubmissionRepository.save(submission);
+//         return response.status(201).json({message: "Assignment submitted successfully"});
+//     } catch (error) {
+//         next(error);
+//     }
+// }
 
 export async function submitAssignment(request: Request, response: Response, next: NextFunction) {
     try {
@@ -18,51 +79,41 @@ export async function submitAssignment(request: Request, response: Response, nex
         }
 
         const assignmentId: number = parseInt(<string>request.params.assignmentId);
-        const {content} = request.body;
 
-        const assignment = await assignmentRepository.findOne({
-            where: {id: assignmentId},
-            relations: {classroom: true},
-        });
+        const assignment = await assignmentRepository.findOne({ where: { id: assignmentId }, relations: { classroom: true } });
+        if (!assignment) return response.status(404).json({ message: "Assignment not found" });
 
-        if (!assignment) {
-            return response.status(404).json({message: "Assignment not found"});
-        }
-
-        const student = await userRepository.findOne({
-            where: {id: decodedJwt.id, role: "student"},
-            relations: {classroom: true},
-        });
-
-        if (!student) {
-            return response.status(404).json({message: "Student not found"});
-        }
+        const student = await userRepository.findOne({ where: { id: decodedJwt.id, role: "student" }, relations: { classroom: true } });
+        if (!student) return response.status(404).json({ message: "Student not found" });
 
         if (!student.classroom || student.classroom.id !== assignment.classroom.id) {
-            return response.status(403).json({message: "Access denied. You are not in this classroom."});
+            return response.status(403).json({ message: "Access denied. You are not in this classroom." });
         }
 
-        const existingSubmission = await assignmentSubmissionRepository.findOne({
-            where: {
-                assignment: {id: assignmentId},
-                student: {id: decodedJwt.id},
-            },
-        });
+        if (!request.files || request.files.length === 0) return response.status(400).json({ message: "No files uploaded" });
 
-        if (existingSubmission) {
-            return response.status(400).json({message: "You have already submitted this assignment"});
-        }
+        const files = request.files as Express.Multer.File[];
 
-        const submission: AssignmentSubmissionEntity = assignmentSubmissionRepository.create({
-            content: content ?? null,
+        const filePaths = files.map(file => "uploads/" + file.filename);
+
+        const submission = assignmentSubmissionRepository.create({
             assignment,
-            student,
+            student
         });
 
-        await assignmentSubmissionRepository.save(submission);
-        return response.status(201).json({message: "Assignment submitted successfully"});
+        // Save submission first so it has an id to associate file-path rows with
+        const savedSubmission = await assignmentSubmissionRepository.save(submission);
+
+        // Create SubmissionFilePath entities with a reference to the saved submission
+        const submissionFilePaths = filePaths.map(filePath => submissionFilePathRepository.create({ path: filePath, submission: savedSubmission }));
+        await submissionFilePathRepository.save(submissionFilePaths);
+
+        // Attach saved file paths to the submission entity and persist relation (optional but keeps the returned entity consistent)
+        savedSubmission.submissionFilePaths = submissionFilePaths;
+        await assignmentSubmissionRepository.save(savedSubmission);
+        return response.status(201).json({ message: "Assignment submitted successfully" });
     } catch (error) {
-        next(error);
+        next(error)
     }
 }
 

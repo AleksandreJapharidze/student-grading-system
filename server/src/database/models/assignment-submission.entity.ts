@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import {AssignmentEntity} from "./assignment.entity";
 import {UserEntity} from "./user.entity";
+import {SubmissionFilePathEntity} from "./submission-file-path.entity";
 
 import {Exclude} from "class-transformer";
 
@@ -9,14 +10,18 @@ export class AssignmentSubmissionEntity {
     @PrimaryGeneratedColumn()
     id: number
 
-    @Column({nullable: true, type: "text"})
-    content: string | null
-
     @CreateDateColumn({nullable: false, type: "datetime"})
     turnInDate: Date
 
     @Column({nullable: true, type: "integer"})
     grade: number | null
+
+    @OneToMany(() => SubmissionFilePathEntity, filePath => filePath.submission, {
+        nullable: true,
+        onDelete: "SET NULL",
+        eager: true
+    })
+    submissionFilePaths: SubmissionFilePathEntity[]
 
     @ManyToOne(() => AssignmentEntity, assignment => assignment.submissions, {
         nullable: true,
