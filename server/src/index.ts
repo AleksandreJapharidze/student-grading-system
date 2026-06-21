@@ -11,7 +11,7 @@ import {addStudentToClassroom, addTeacherToClassroom, removeStudentFromClassroom
 import {getTeacherById, getTeachers, getTeachersByClassroomId} from "./services/teacher.service";
 import {login, registerStudent, registerTeacher} from "./services/auth.service";
 import {createAssignment, deleteAssignment, getAssignmentById, getAssignmentsByClassroomId} from "./services/assignment.service";
-import {getSubmissionsByAssignmentId, getSubmissionsByStudentId, gradeSubmission, submitAssignment} from "./services/assignment-submission.service";
+import {getSubmissionsByAssignmentId, getSubmissionsByStudentId, gradeSubmission, submitAssignment, deleteSubmission} from "./services/assignment-submission.service";
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
@@ -67,6 +67,7 @@ app.get("/api/assignments/:assignmentId", getAssignmentById);
 app.delete("/api/assignments/:assignmentId", deleteAssignment);
 
 app.post("/api/assignments/:assignmentId/submissions", upload.array("files"), submitAssignment);
+app.delete("/api/assignments/:assignmentId/submissions/:submissionId", deleteSubmission);
 
 app.get("/api/assignments/:assignmentId/submissions", getSubmissionsByAssignmentId);
 app.get("/api/students/:studentId/submissions", getSubmissionsByStudentId);
