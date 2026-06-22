@@ -36,6 +36,10 @@ export async function submitAssignment(request: Request, response: Response, nex
             return response.status(403).json({ message: "Access denied. You are not in this classroom." });
         }
 
+        if (!request.files || request.files.length === 0) return response.status(400).json({ message: "No files uploaded" });
+
+        const files = request.files as Express.Multer.File[];
+
         const submissionExists = await assignmentSubmissionRepository.findOne({
             where: {
                 assignment: {id: assignmentId},
@@ -44,12 +48,15 @@ export async function submitAssignment(request: Request, response: Response, nex
         });
 
         if (submissionExists) {
+            const uploadsDir = path.resolve(__dirname, "..", "uploads");
+            for (const file of files) {
+                const filePath = path.join(uploadsDir, file.filename);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            }
             return response.status(400).json({ message: "You have already submitted this assignment" });
         }
-
-        if (!request.files || request.files.length === 0) return response.status(400).json({ message: "No files uploaded" });
-
-        const files = request.files as Express.Multer.File[];
 
         const filePaths = files.map(file => file.filename);
 
@@ -58,14 +65,11 @@ export async function submitAssignment(request: Request, response: Response, nex
             student
         });
 
-        // Save submission first so it has an id to associate file-path rows with
         const savedSubmission = await assignmentSubmissionRepository.save(submission);
 
-        // Create SubmissionFilePath entities with a reference to the saved submission
         const submissionFilePaths = filePaths.map(filePath => submissionFilePathRepository.create({ path: filePath, submission: savedSubmission }));
         await submissionFilePathRepository.save(submissionFilePaths);
 
-        // Attach saved file paths to the submission entity and persist relation (optional but keeps the returned entity consistent)
         savedSubmission.submissionFilePaths = submissionFilePaths;
         await assignmentSubmissionRepository.save(savedSubmission);
         return response.status(201).json({ message: "Assignment submitted successfully" });
@@ -170,8 +174,9 @@ export async function deleteSubmission(request: Request, response: Response, nex
         }
 
         if (submission.submissionFilePaths !== null && submission.submissionFilePaths !== undefined) {
+            const uploadsDir = path.resolve(__dirname, "..", "uploads");
             for (const submissionFilePath of submission.submissionFilePaths) {
-                const filePath = path.join(__dirname, "uploads", submissionFilePath.path);
+                const filePath = path.join(uploadsDir, submissionFilePath.path);
 
                 if (!fs.existsSync(filePath)) {
                     return response.status(404).json({message: "File not found"});

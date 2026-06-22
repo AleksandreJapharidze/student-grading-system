@@ -16,4 +16,4 @@ export class SubmissionFilePathEntity {
     })
     @JoinColumn({name: "submissionId"})
     submission: AssignmentSubmissionEntity
-} 
+}
