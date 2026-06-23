@@ -143,6 +143,32 @@ export async function getSubmissionsByStudentId(request: Request, response: Resp
     }
 }
 
+export async function getSubmissionFileByFileName(request: Request, response: Response, next: NextFunction) {
+    try {
+        const decodedJwt: JwtPayload | null = await verifyToken(request);
+        if (!decodedJwt) {
+            return response.status(401).json({message: "Unauthorized"});
+        }
+
+        if (!request.params || !request.params.fileName) {
+            return response.status(400).json({message: "fileName is required"});
+        }
+
+        const fileName: string = request.params.fileName as string;
+
+        const filePath = path.join(path.resolve(__dirname, "..", "uploads"), fileName);
+
+        if (!fs.existsSync(filePath)) {
+            return response.status(404).json({message: "File not found"});
+        }
+        
+        return response.status(200).sendFile(filePath);
+    } catch (error) {
+        console.log("Unexpected error:", error);
+        next(error);
+    }
+}
+
 export async function deleteSubmission(request: Request, response: Response, next: NextFunction) {
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
