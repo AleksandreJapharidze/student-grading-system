@@ -2,6 +2,7 @@ import {NextFunction, Response, Request} from "express";
 
 import {userRepository} from "../database/repositories/user.repository"
 import {UserEntity} from "../database/models/user.entity";
+import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError} from "../errors/app-error";
 import {JwtPayload, verifyToken} from "../util/jwt.util";
 
 type Student = {
@@ -31,7 +32,7 @@ export async function getStudentById(request: Request, response: Response, next:
         const decodedJwt: JwtPayload | null = await verifyToken(request);
 
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError();
         }
 
         console.log(decodedJwt);
@@ -39,12 +40,12 @@ export async function getStudentById(request: Request, response: Response, next:
         const id: number = parseInt(<string>request.params.studentId);
 
         if (decodedJwt.id !== id || decodedJwt.role !== "student") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         const student: Student | null = await userRepository.findOne({where: {id: id, role: "student"}});
         if (!student) {
-            return response.status(404).json({message: "Student not found"});
+            throw new NotFoundError("Student not found");
         }
         return response.status(200).json(student);
     } catch (error) {
@@ -58,7 +59,7 @@ export async function createStudent(request: Request, response: Response, next: 
 
         const studentExists: Student | null = await userRepository.findOne({where: {email: student.email}});
         if (studentExists) {
-            return response.status(400).json({message: "User with this email is already registered"});
+            throw new ValidationError("User with this email is already registered");
         }
 
         const newStudent: UserEntity = userRepository.create(student);

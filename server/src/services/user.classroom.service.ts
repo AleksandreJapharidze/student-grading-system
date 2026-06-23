@@ -3,36 +3,41 @@ import {NextFunction, Response, Request} from "express";
 import {userRepository} from "../database/repositories/user.repository"
 import {UserEntity} from "../database/models/user.entity";
 
+import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError} from "../errors/app-error";
 import {classroomRepository} from "../database/repositories/classroom.repository"
 import {ClassroomEntity} from "../database/models/classroom.entity";
-import {verifyToken} from "../util/jwt.util";
+import {JwtPayload, verifyToken} from "../util/jwt.util";
 
 export async function addStudentToClassroom(request: Request, response: Response, next: NextFunction) {
     try {
         const decodedJwt = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError();
+        }
+
+        if (!request.params || !request.params.studentId) {
+            throw new ValidationError("studentId is required");
         }
 
         const studentId: number = parseInt(<string>request.params.studentId)
-        if (decodedJwt.role !== "teacher" && decodedJwt.role !== "admin") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+        if (!accessGranted(decodedJwt)) {
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         const student: UserEntity | null = await userRepository.findOne({where: {id: studentId, role: "student"}});
 
         if (!student) {
-            return response.status(404).json({message: "Student not found"});
+            throw new NotFoundError("Student not found");
         }
 
         if (student.classroom) {
-            return response.status(400).json({message: "Student is already in a classroom"});
+            throw new ValidationError("Student is already in a classroom");
         }
 
         const classroom: ClassroomEntity | null = await classroomRepository.findOne({where: {id: 1}});
 
         if (!classroom) {
-            return response.status(404).json({message: "Classroom not found"});
+            throw new NotFoundError("Classroom not found");
         }
 
         student.classroom = classroom;
@@ -47,28 +52,32 @@ export async function addTeacherToClassroom(request: Request, response: Response
     try {
         const decodedJwt = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError();
+        }
+
+        if (!request.params || !request.params.teacherId) {
+            throw new ValidationError("teacherId is required");
         }
 
         const teacherId: number = parseInt(<string>request.params.teacherId)
-        if (decodedJwt.role !== "teacher" && decodedJwt.role !== "admin") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+        if (!accessGranted(decodedJwt)) {
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         const teacher: UserEntity | null = await userRepository.findOne({where: {id: teacherId, role: "teacher"}});
 
         if (!teacher) {
-            return response.status(404).json({message: "Teacher not found"});
+            throw new NotFoundError("Teacher not found");
         }
 
         if (teacher.classroom) {
-            return response.status(400).json({message: "Teacher is already in a classroom"});
+            throw new ValidationError("Teacher is already in a classroom");
         }
 
         const classroom: ClassroomEntity | null = await classroomRepository.findOne({where: {id: 1}});
 
         if (!classroom) {
-            return response.status(404).json({message: "Classroom not found"});
+            throw new NotFoundError("Classroom not found");
         }
 
         teacher.classroom = classroom;
@@ -83,22 +92,26 @@ export async function removeStudentFromClassroom(request: Request, response: Res
     try {
         const decodedJwt = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError();
+        }
+
+        if (!request.params || !request.params.studentId) {
+            throw new ValidationError("studentId is required");
         }
 
         const studentId: number = parseInt(<string>request.params.studentId);
-        if (decodedJwt.role !== "teacher" && decodedJwt.role !== "admin") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+        if (!accessGranted(decodedJwt)) {
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         const student: UserEntity | null = await userRepository.findOne({where: {id: studentId, role: "student"}});
 
         if (!student) {
-            return response.status(404).json({message: "Student not found"});
+            throw new NotFoundError("Student not found");
         }
 
         if (student.classroom === null) {
-            return response.status(400).json({message: "Student is not in a classroom"});
+            throw new ValidationError("Student is not in a classroom");
         }
 
         student.classroom = null;
@@ -111,24 +124,28 @@ export async function removeStudentFromClassroom(request: Request, response: Res
 
 export async function removeTeacherFromClassroom(request: Request, response: Response, next: NextFunction) {
     try {
-        const decodedJwt = await verifyToken(request);
+        const decodedJwt: JwtPayload | null = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError();
+        }
+
+        if (!request.params || !request.params.teacherId) {
+            throw new ValidationError("teacherId is required");
         }
 
         const teacherId: number = parseInt(<string>request.params.teacherId);
-        if (decodedJwt.role !== "teacher" && decodedJwt.role !== "admin") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+        if (!accessGranted(decodedJwt)) {
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         const teacher: UserEntity | null = await userRepository.findOne({where: {id: teacherId, role: "teacher"}});
 
         if (!teacher) {
-            return response.status(404).json({message: "Teacher not found"});
+            throw new NotFoundError("Teacher not found");
         }
 
         if (teacher.classroom === null) {
-            return response.status(400).json({message: "Teacher is not in a classroom"});
+            throw new ValidationError("Teacher is not in a classroom");
         }
 
         teacher.classroom = null;
@@ -137,4 +154,8 @@ export async function removeTeacherFromClassroom(request: Request, response: Res
     } catch (error) {
         next(error);
     }
+}
+
+function accessGranted(decodedJwt: JwtPayload) {
+    return decodedJwt.role === "teacher" || decodedJwt.role === "admin";
 }

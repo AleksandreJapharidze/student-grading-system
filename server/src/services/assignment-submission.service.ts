@@ -7,36 +7,37 @@ import {assignmentSubmissionRepository} from "../database/repositories/assignmen
 import {submissionFilePathRepository} from "../database/repositories/submission-file-path.repository";
 import {userRepository} from "../database/repositories/user.repository";
 import {AssignmentSubmissionEntity} from "../database/models/assignment-submission.entity";
+import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError} from "../errors/app-error";
 import {JwtPayload, verifyToken} from "../util/jwt.util";
 
 export async function submitAssignment(request: Request, response: Response, next: NextFunction) {
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError();
         }
 
         if (decodedJwt.role !== "student") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         if (!request.params.assignmentId) {
-            return response.status(400).json({message: "assignmentId is required"});
+            throw new ValidationError("assignmentId is required");
         }
 
         const assignmentId: number = parseInt(<string>request.params.assignmentId);
 
         const assignment = await assignmentRepository.findOne({ where: { id: assignmentId }, relations: { classroom: true } });
-        if (!assignment) return response.status(404).json({ message: "Assignment not found" });
+        if (!assignment) throw new NotFoundError("Assignment not found");
 
         const student = await userRepository.findOne({ where: { id: decodedJwt.id, role: "student" }, relations: { classroom: true } });
-        if (!student) return response.status(404).json({ message: "Student not found" });
+        if (!student) throw new NotFoundError("Student not found");
 
         if (!student.classroom || student.classroom.id !== assignment.classroom.id) {
-            return response.status(403).json({ message: "Access denied. You are not in this classroom." });
+            throw new ForbiddenError("Access denied. You are not in this classroom.");
         }
 
-        if (!request.files || request.files.length === 0) return response.status(400).json({ message: "No files uploaded" });
+        if (!request.files || request.files.length === 0) throw new ValidationError("No files uploaded");
 
         const files = request.files as Express.Multer.File[];
 
@@ -55,7 +56,7 @@ export async function submitAssignment(request: Request, response: Response, nex
                     fs.unlinkSync(filePath);
                 }
             }
-            return response.status(400).json({ message: "You have already submitted this assignment" });
+            throw new ValidationError("You have already submitted this assignment");
         }
 
         const filePaths = files.map(file => file.filename);
@@ -96,7 +97,7 @@ export async function getSubmissionsByAssignmentId(request: Request, response: R
         });
 
         if (!assignment) {
-            return response.status(404).json({message: "Assignment not found"});
+            throw new NotFoundError("Assignment not found");
         }
 
         const teacher = await userRepository.findOne({
@@ -105,7 +106,7 @@ export async function getSubmissionsByAssignmentId(request: Request, response: R
         });
 
         if (!teacher?.classroom || teacher.classroom.id !== assignment.classroom.id) {
-            return response.status(403).json({message: "Access denied. You are not in this classroom."});
+            throw new ForbiddenError("Access denied. You are not in this classroom.");
         }
 
         const submissions: AssignmentSubmissionEntity[] = await assignmentSubmissionRepository.find({
@@ -129,7 +130,7 @@ export async function getSubmissionsByStudentId(request: Request, response: Resp
         const studentId: number = parseInt(<string>request.params.studentId);
 
         if (decodedJwt.id !== studentId || decodedJwt.role !== "student") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         const submissions: AssignmentSubmissionEntity[] = await assignmentSubmissionRepository.find({
@@ -147,11 +148,11 @@ export async function getSubmissionFileByFileName(request: Request, response: Re
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError();
         }
 
         if (!request.params || !request.params.fileName) {
-            return response.status(400).json({message: "fileName is required"});
+            throw new ValidationError("fileName is required");
         }
 
         const fileName: string = request.params.fileName as string;
@@ -159,7 +160,7 @@ export async function getSubmissionFileByFileName(request: Request, response: Re
         const filePath = path.join(path.resolve(__dirname, "..", "uploads"), fileName);
 
         if (!fs.existsSync(filePath)) {
-            return response.status(404).json({message: "File not found"});
+            throw new NotFoundError("File not found");
         }
         
         return response.status(200).sendFile(filePath);
@@ -173,15 +174,15 @@ export async function deleteSubmission(request: Request, response: Response, nex
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError();
         }
 
         if (decodedJwt.role !== "student") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         if (!request.params.submissionId) {
-            return response.status(400).json({message: "submissionId is required"});
+            throw new ValidationError("submissionId is required");
         }
 
         const submissionId: number = parseInt(<string>request.params.submissionId);
@@ -196,7 +197,7 @@ export async function deleteSubmission(request: Request, response: Response, nex
         }
 
         if (!submission.student || submission.student.id !== decodedJwt.id) {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         if (submission.submissionFilePaths !== null && submission.submissionFilePaths !== undefined) {
@@ -205,7 +206,7 @@ export async function deleteSubmission(request: Request, response: Response, nex
                 const filePath = path.join(uploadsDir, submissionFilePath.path);
 
                 if (!fs.existsSync(filePath)) {
-                    return response.status(404).json({message: "File not found"});
+                    throw new NotFoundError("File not found");
                 }
 
                 fs.unlinkSync(filePath);
@@ -235,11 +236,11 @@ export async function gradeSubmission(request: Request, response: Response, next
         const {grade} = request.body;
 
         if (grade === undefined || grade === null) {
-            return response.status(400).json({message: "grade is required"});
+            throw new ValidationError("grade is required");
         }
 
         if (typeof grade !== "number" || grade < 0 || grade > 10) {
-            return response.status(400).json({message: "grade must be a number between 0 and 10"});
+            throw new ValidationError("grade must be a number between 0 and 10");
         }
 
         const submission = await assignmentSubmissionRepository.findOne({
@@ -248,11 +249,11 @@ export async function gradeSubmission(request: Request, response: Response, next
         });
 
         if (!submission) {
-            return response.status(404).json({message: "Submission not found"});
+            throw new NotFoundError("Submission not found");
         }
 
         if (!submission.turnInDate) {
-            return response.status(400).json({message: "Submission has not been turned in"});
+            throw new ValidationError("Submission has not been turned in");
         }
 
         const teacher = await userRepository.findOne({
@@ -261,7 +262,7 @@ export async function gradeSubmission(request: Request, response: Response, next
         });
 
         if (!teacher?.classroom || teacher.classroom.id !== submission.assignment.classroom.id) {
-            return response.status(403).json({message: "Access denied. You are not in this classroom."});
+            throw new ForbiddenError("Access denied. You are not in this classroom.");
         }
 
         submission.grade = grade;

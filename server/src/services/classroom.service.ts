@@ -2,6 +2,7 @@ import {NextFunction, Response, Request} from "express";
 
 import {classroomRepository} from "../database/repositories/classroom.repository"
 import {ClassroomEntity} from "../database/models/classroom.entity";
+import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError} from "../errors/app-error";
 import {JwtPayload, verifyToken} from "../util/jwt.util";
 
 type Classroom = {
@@ -17,11 +18,11 @@ export async function createClass(request: Request, response: Response, next: Ne
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError();
         }
 
         if (decodedJwt.role !== "admin" && decodedJwt.role !== "teacher") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         console.log(
@@ -32,12 +33,12 @@ export async function createClass(request: Request, response: Response, next: Ne
 
         const numberOfClasses: number = await getNumberOfClasses();
         if (numberOfClasses > 0) {
-            return response.status(400).json({message: "Classroom already exists"});
+            throw new ValidationError("Classroom already exists");
         }
 
         const {name} = request.body;
         if (!name) {
-            return response.status(400).json({message: "Name is required"});
+            throw new ValidationError("Name is required");
         }
 
         const classroom: ClassroomEntity = classroomRepository.create({name});
@@ -52,12 +53,12 @@ export async function getClass(request: Request, response: Response, next: NextF
     try {
         const classes: Classroom[] = await classroomRepository.find();
         if (classes.length === 0) {
-            return response.status(404).json({message: "No classrooms found"});
+            throw new NotFoundError("No classrooms found");
         } else if (classes.length > 1) {}
 
         const classroom: Classroom | null | undefined = classes[0];
         if (!classroom) {
-            return response.status(404).json({message: "Classroom not found"});
+            throw new NotFoundError("Classroom not found");
         }
         return response.status(200).json(classroom);
     } catch (error) {
@@ -69,18 +70,18 @@ export async function getClassByUserId(request: Request, response: Response, nex
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError();
         }
 
         const userId: number = parseInt(<string>request.params.userId);
 
         if (decodedJwt.id !== userId) {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         const classroom: Classroom | null = await classroomRepository.findOne({where: {users: {id: userId}}});
         if (!classroom) {
-            return response.status(404).json({message: "Classroom not found"});
+            throw new NotFoundError("Classroom not found");
         }
         return response.status(200).json(classroom);
     } catch (error) {

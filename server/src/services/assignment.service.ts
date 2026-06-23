@@ -4,6 +4,7 @@ import {assignmentRepository} from "../database/repositories/assignment.reposito
 import {classroomRepository} from "../database/repositories/classroom.repository";
 import {userRepository} from "../database/repositories/user.repository";
 import {AssignmentEntity} from "../database/models/assignment.entity";
+import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError} from "../errors/app-error";
 import {JwtPayload, verifyToken} from "../util/jwt.util";
 import {ClassroomEntity} from "../database/models/classroom.entity";
 
@@ -11,22 +12,22 @@ export async function createAssignment(request: Request, response: Response, nex
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError();
         }
 
         if (decodedJwt.role !== "teacher") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         const {task, deadline, classroomId} = request.body;
 
         if (!task || !deadline || !classroomId) {
-            return response.status(400).json({message: "task, deadline, and classroomId are required"});
+            throw new ValidationError("task, deadline, and classroomId are required");
         }
 
         const classroom = await classroomRepository.findOne({where: {id: classroomId}});
         if (!classroom) {
-            return response.status(404).json({message: "Classroom not found"});
+            throw new NotFoundError("Classroom not found");
         }
 
         const teacher = await userRepository.findOne({
@@ -35,11 +36,11 @@ export async function createAssignment(request: Request, response: Response, nex
         });
 
         if (!teacher) {
-            return response.status(404).json({message: "Teacher not found"});
+            throw new NotFoundError("Teacher not found");
         }
 
         if (!teacher.classroom || teacher.classroom.id !== classroomId) {
-            return response.status(403).json({message: "Access denied. You are not in this classroom."});
+            throw new ForbiddenError("Access denied. You are not in this classroom.");
         }
 
         const assignment: AssignmentEntity = assignmentRepository.create({
@@ -122,7 +123,7 @@ export async function deleteAssignment(request: Request, response: Response, nex
         });
 
         if (!teacher?.classroom || teacher.classroom.id !== assignment.classroom.id) {
-            return response.status(403).json({message: "Access denied. You are not in this classroom."});
+            throw new ForbiddenError("Access denied. You are not in this classroom.");
         }
 
         await assignmentRepository.remove(assignment);
