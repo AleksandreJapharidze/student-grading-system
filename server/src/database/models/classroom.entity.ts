@@ -13,7 +13,7 @@ export class ClassroomEntity {
 
     @OneToMany(() => UserEntity, user => user.classroom, {
         cascade: true,
-        orphanedRowAction: "nullify"
+        orphanedRowAction: "nullify",
     })
     users: UserEntity[];
 

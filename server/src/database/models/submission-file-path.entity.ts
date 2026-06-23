@@ -10,7 +10,7 @@ export class SubmissionFilePathEntity {
     path: string
 
     @ManyToOne(() => AssignmentSubmissionEntity, submission => submission.submissionFilePaths, {
-        nullable: true,
+        nullable: false,
         onDelete: "CASCADE",
         eager: false
     })

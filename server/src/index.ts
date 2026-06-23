@@ -4,16 +4,18 @@ import dotenv from "dotenv";
 import path from "path";
 import multer from "multer";
 
-import {createClass, deleteClass, getClass, getClassByUserId} from "./services/classroom.service";
-import {AppDataSource} from "./config/type-orm-config";
-import {createStudent, getStudentById, getStudents, getStudentsByClassroomId} from "./services/student.service";
-import {addStudentToClassroom, addTeacherToClassroom, removeStudentFromClassroom, removeTeacherFromClassroom} from "./services/user.classroom.service";
-import {getTeacherById, getTeachers, getTeachersByClassroomId} from "./services/teacher.service";
-import {login, registerStudent, registerTeacher} from "./services/auth.service";
-import {createAssignment, deleteAssignment, getAssignmentById, getAssignmentsByClassroomId} from "./services/assignment.service";
-import {getSubmissionsByAssignmentId, getSubmissionsByStudentId, gradeSubmission, submitAssignment, deleteSubmission, getSubmissionFileByFileName} from "./services/assignment-submission.service";
-
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
+import classroomRouter from "./routers/classroom.router";
+import studentRouter from "./routers/student.router";
+import teacherRouter from "./routers/teacher.router";
+import assignmentRoute from "./routers/assignment.router";
+import authRouter from "./routers/auth.router";
+import fileRouter from "./routers/file.router";
+import userRouter from "./routers/user.router";
+
+import { AppDataSource } from "./config/type-orm-config";
+import { submitAssignment } from "./services/assignment-submission.service";
 
 const app = express();
 
@@ -40,39 +42,46 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-app.post("/api/auth/login", login);
-app.get("/api/students", getStudents);
-app.get("/api/students/:studentId", getStudentById);
-app.post("/api/students", createStudent);
-app.post("/api/students/register", registerStudent);
-app.get("/api/teachers", getTeachers);
-app.get("/api/teachers/:teacherId", getTeacherById);
-app.post("/api/teachers/register", registerTeacher);
-app.get("/api/classroom", getClass);
-app.post("/api/classroom", createClass);
-app.delete("/api/classroom", deleteClass);
-app.get("/api/classroom/students", getStudentsByClassroomId);
-app.get("/api/classroom/teachers", getTeachersByClassroomId);
-app.patch("/api/classroom/students/:studentId", addStudentToClassroom);
-app.delete("/api/classroom/students/:studentId", removeStudentFromClassroom);
-app.patch("/api/classroom/teachers/:teacherId", addTeacherToClassroom);
-app.delete("/api/classroom/teachers/:teacherId", removeTeacherFromClassroom);
-app.get("/api/users/:userId/classroom", getClassByUserId);
+app.use("/api/classroom", classroomRouter);
+app.use("/api/students", studentRouter);
+app.use("/api/teachers", teacherRouter);
+app.use("/api/assignments", assignmentRoute);
+app.use("/api/auth", authRouter);
+app.use("/api/users", userRouter);
+app.use("/api/files", fileRouter);
+
+// app.post("/api/auth/login", login);
+// app.get("/api/students", getStudents);
+// app.get("/api/students/:studentId", getStudentById);
+// app.post("/api/students", createStudent);
+// app.post("/api/students/register", registerStudent);
+// app.get("/api/teachers", getTeachers);
+// app.get("/api/teachers/:teacherId", getTeacherById);
+// app.post("/api/teachers/register", registerTeacher);
+// app.get("/api/classroom", getClass);
+// app.post("/api/classroom", createClass);
+// app.delete("/api/classroom", deleteClass);
+// app.get("/api/classroom/students", getStudentsByClassroomId);
+// app.get("/api/classroom/teachers", getTeachersByClassroomId);
+// app.patch("/api/classroom/students/:studentId", addStudentToClassroom);
+// app.delete("/api/classroom/students/:studentId", removeStudentFromClassroom);
+// app.patch("/api/classroom/teachers/:teacherId", addTeacherToClassroom);
+// app.delete("/api/classroom/teachers/:teacherId", removeTeacherFromClassroom);
+// app.get("/api/users/:userId/classroom", getClassByUserId);
+
 // app.post("/api/assignments", createAssignment);
 
-app.post("/api/assignments", createAssignment);
-
-app.get("/api/classroom/assignments", getAssignmentsByClassroomId);
-app.get("/api/assignments/:assignmentId", getAssignmentById);
-app.delete("/api/assignments/:assignmentId", deleteAssignment);
+// app.get("/api/classroom/assignments", getAssignmentsByClassroomId);
+// app.get("/api/assignments/:assignmentId", getAssignmentById);
+// app.delete("/api/assignments/:assignmentId", deleteAssignment);
 
 app.post("/api/assignments/:assignmentId/submissions", upload.array("files"), submitAssignment);
-app.delete("/api/assignments/:assignmentId/submissions/:submissionId", deleteSubmission);
-app.get("/api/files/:fileName", getSubmissionFileByFileName);
+// app.delete("/api/assignments/:assignmentId/submissions/:submissionId", deleteSubmission);
+// app.get("/api/files/:fileName", getSubmissionFileByFileName);
 
-app.get("/api/assignments/:assignmentId/submissions", getSubmissionsByAssignmentId);
-app.get("/api/students/:studentId/submissions", getSubmissionsByStudentId);
-app.patch("/api/assignments/:assignmentId/submissions/:submissionId/grade", gradeSubmission);
+// app.get("/api/assignments/:assignmentId/submissions", getSubmissionsByAssignmentId);
+// app.get("/api/students/:studentId/submissions", getSubmissionsByStudentId);
+// app.patch("/api/assignments/:assignmentId/submissions/:submissionId/grade", gradeSubmission);
 
 AppDataSource.initialize()
     .then(() => {

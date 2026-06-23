@@ -16,11 +16,7 @@ export class AssignmentSubmissionEntity {
     @Column({nullable: true, type: "integer"})
     grade: number | null
 
-    @OneToMany(() => SubmissionFilePathEntity, filePath => filePath.submission, {
-        nullable: true,
-        onDelete: "SET NULL",
-        eager: true
-    })
+    @OneToMany(() => SubmissionFilePathEntity, filePath => filePath.submission)
     submissionFilePaths: SubmissionFilePathEntity[]
 
     @ManyToOne(() => AssignmentEntity, assignment => assignment.submissions, {
@@ -32,7 +28,11 @@ export class AssignmentSubmissionEntity {
     @Exclude()
     assignment: AssignmentEntity
 
-    @ManyToOne(() => UserEntity, user => user.assignmentSubmissions)
+    @ManyToOne(() => UserEntity, user => user.assignmentSubmissions, {
+        nullable: false,
+        onDelete: "CASCADE",
+        eager: false
+    })
     @JoinColumn({name: "studentId"})
     student: UserEntity
 }
