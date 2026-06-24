@@ -144,6 +144,35 @@ export async function getSubmissionsByStudentId(request: Request, response: Resp
     }
 }
 
+export async function getSubmissionByAssignmentIdAndStudentId(request: Request, response: Response, next: NextFunction) {
+    try {
+        const decodedJwt: JwtPayload | null = await verifyToken(request);
+        if (!decodedJwt) {
+            return response.status(401).json({message: "Unauthorized"});
+        }
+
+        const assignmentId: number = parseInt(<string>request.params.assignmentId);
+        const studentId: number = parseInt(<string>request.query.studentId);
+
+        if (decodedJwt.id !== studentId || decodedJwt.role !== "student") {
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
+        }
+
+        const submission = await assignmentSubmissionRepository.findOne({
+            where: {assignment: {id: assignmentId}, student: {id: studentId}},
+            relations: {assignment: true, student: true},
+        });
+
+        if (!submission) {
+            throw new NotFoundError("Submission not found");
+        }
+
+        return response.status(200).json(submission);
+    } catch (error) {
+        next(error);
+    }
+}
+
 export async function getSubmissionFileByFileName(request: Request, response: Response, next: NextFunction) {
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
@@ -191,7 +220,7 @@ export async function deleteSubmission(request: Request, response: Response, nex
             where: {id: submissionId},
             relations: {assignment: true, student: true},
         });
-
+        
         if (!submission) {
             return response.status(404).json({message: "Submission not found"});
         }
@@ -199,6 +228,8 @@ export async function deleteSubmission(request: Request, response: Response, nex
         if (!submission.student || submission.student.id !== decodedJwt.id) {
             throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
+
+        await assignmentSubmissionRepository.delete(submission.id);
 
         if (submission.submissionFilePaths !== null && submission.submissionFilePaths !== undefined) {
             const uploadsDir = path.resolve(__dirname, "..", "uploads");
@@ -212,8 +243,6 @@ export async function deleteSubmission(request: Request, response: Response, nex
                 fs.unlinkSync(filePath);
             }
         }
-
-        await assignmentSubmissionRepository.delete(submission.id);
         return response.status(200).json({message: "Submission deleted successfully"});
     } catch (error) {
         next(error);

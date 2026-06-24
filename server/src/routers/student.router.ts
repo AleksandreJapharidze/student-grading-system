@@ -1,31 +1,33 @@
 import Router from "express";
+import {body, param} from "express-validator";
 import {getStudentById, getStudents} from "../services/student.service";
 import {registerStudent} from "../services/auth.service";
 import {getSubmissionsByStudentId} from "../services/assignment-submission.service";
 import {asyncHandler} from "../middleware/async-handler";
-import {validateSchema} from "../middleware/validation.middleware";
+import {validateRequest} from "../middleware/validation.middleware";
 
 const studentRouter = Router();
 
 studentRouter.get("/", asyncHandler(getStudents));
 studentRouter.get(
     "/:studentId",
-    validateSchema({studentId: {in: "params", required: true, type: "number"}}),
+    param("studentId").isInt().withMessage("studentId must be an integer").toInt(),
+    validateRequest,
     asyncHandler(getStudentById)
 );
 studentRouter.post(
     "/register",
-    validateSchema({
-        name: {required: true, type: "string"},
-        email: {required: true, type: "string"},
-        password: {required: true, type: "string"},
-    }),
+    body("name").trim().notEmpty().withMessage("name is required"),
+    body("email").trim().notEmpty().withMessage("email is required").isEmail().withMessage("email must be valid"),
+    body("password").notEmpty().withMessage("password is required"),
+    validateRequest,
     asyncHandler(registerStudent)
 );
 
 studentRouter.get(
     "/:studentId/submissions",
-    validateSchema({studentId: {in: "params", required: true, type: "number"}}),
+    param("studentId").isInt().withMessage("studentId must be an integer").toInt(),
+    validateRequest,
     asyncHandler(getSubmissionsByStudentId)
 );
 

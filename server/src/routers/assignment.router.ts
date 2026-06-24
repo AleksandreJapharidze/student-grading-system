@@ -1,43 +1,58 @@
 import Router from "express";
-import {createAssignment, deleteAssignment, getAssignmentById, getAssignmentsByClassroomId} from "../services/assignment.service";
-import {getSubmissionsByAssignmentId, submitAssignment, deleteSubmission, gradeSubmission} from "../services/assignment-submission.service";
+import {body, param, query} from "express-validator";
+import {createAssignment, deleteAssignment, getAssignmentById} from "../services/assignment.service";
+import {getSubmissionsByAssignmentId, getSubmissionByAssignmentIdAndStudentId, deleteSubmission, gradeSubmission} from "../services/assignment-submission.service";
 import {asyncHandler} from "../middleware/async-handler";
-import {validateSchema} from "../middleware/validation.middleware";
+import {validateRequest} from "../middleware/validation.middleware";
 
 const assignmentRouter = Router();
 
 assignmentRouter.post(
     "/",
-    validateSchema({
-        task: {required: true, type: "string"},
-        deadline: {required: true, type: "string"},
-        classroomId: {required: true, type: "number"},
-    }),
+    body("task").trim().notEmpty().withMessage("task is required"),
+    body("deadline").trim().notEmpty().withMessage("deadline is required"),
+    body("classroomId").isInt().withMessage("classroomId must be an integer").toInt(),
+    validateRequest,
     asyncHandler(createAssignment)
 );
-assignmentRouter.get("/:assignmentId", validateSchema({assignmentId: {in: "params", required: true, type: "number"}}), asyncHandler(getAssignmentById));
-assignmentRouter.delete("/:assignmentId", validateSchema({assignmentId: {in: "params", required: true, type: "number"}}), asyncHandler(deleteAssignment));
-
+assignmentRouter.get(
+    "/:assignmentId",
+    param("assignmentId").isInt().withMessage("assignmentId must be an integer").toInt(),
+    validateRequest,
+    asyncHandler(getAssignmentById)
+);
+assignmentRouter.get(
+    "/:assignmentId/submissions",
+    param("assignmentId").isInt().withMessage("assignmentId must be an integer").toInt(),
+    query("studentId").isInt().withMessage("studentId must be an integer").toInt(),
+    validateRequest,
+    asyncHandler(getSubmissionByAssignmentIdAndStudentId)
+);
+assignmentRouter.delete(
+    "/:assignmentId",
+    param("assignmentId").isInt().withMessage("assignmentId must be an integer").toInt(),
+    validateRequest,
+    asyncHandler(deleteAssignment)
+);
 assignmentRouter.delete(
     "/:assignmentId/submissions/:submissionId",
-    validateSchema({
-        assignmentId: {in: "params", required: true, type: "number"},
-        submissionId: {in: "params", required: true, type: "number"},
-    }),
+    param("assignmentId").isInt().withMessage("assignmentId must be an integer").toInt(),
+    param("submissionId").isInt().withMessage("submissionId must be an integer").toInt(),
+    validateRequest,
     asyncHandler(deleteSubmission)
 );
 assignmentRouter.get(
     "/:assignmentId/submissions",
-    validateSchema({assignmentId: {in: "params", required: true, type: "number"}}),
+    param("assignmentId").isInt().withMessage("assignmentId must be an integer").toInt(),
+    validateRequest,
     asyncHandler(getSubmissionsByAssignmentId)
 );
 assignmentRouter.patch(
     "/:assignmentId/submissions/:submissionId/grade",
-    validateSchema({
-        assignmentId: {in: "params", required: true, type: "number"},
-        submissionId: {in: "params", required: true, type: "number"},
-        grade: {in: "body", required: true, type: "number", min: 0, max: 10},
-    }),
+    param("assignmentId").isInt().withMessage("assignmentId must be an integer").toInt(),
+    param("submissionId").isInt().withMessage("submissionId must be an integer").toInt(),
+    body("grade").isInt({min: 0, max: 10}).withMessage("grade must be an integer between 0 and 10").toInt(),
+    validateRequest,
     asyncHandler(gradeSubmission)
 );
 

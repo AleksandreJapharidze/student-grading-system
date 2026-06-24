@@ -6,5 +6,5 @@ AppDataSource.initialize()
         console.log("Database connected");
     })
     .catch((err) => {
-        console.error("Database connection failed", err);
+        console.error("Database connection failed:", err);
     });

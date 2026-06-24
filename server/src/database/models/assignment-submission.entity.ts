@@ -16,7 +16,9 @@ export class AssignmentSubmissionEntity {
     @Column({nullable: true, type: "integer"})
     grade: number | null
 
-    @OneToMany(() => SubmissionFilePathEntity, filePath => filePath.submission)
+    @OneToMany(() => SubmissionFilePathEntity, filePath => filePath.submission, {
+        eager: true
+    })
     submissionFilePaths: SubmissionFilePathEntity[]
 
     @ManyToOne(() => AssignmentEntity, assignment => assignment.submissions, {

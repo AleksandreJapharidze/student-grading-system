@@ -1,24 +1,25 @@
 import Router from "express";
+import {body, param} from "express-validator";
 import {getTeacherById, getTeachers} from "../services/teacher.service";
 import {registerTeacher} from "../services/auth.service";
 import {asyncHandler} from "../middleware/async-handler";
-import {validateSchema} from "../middleware/validation.middleware";
+import {validateRequest} from "../middleware/validation.middleware";
 
 const teacherRouter = Router();
 
 teacherRouter.get("/", asyncHandler(getTeachers));
 teacherRouter.get(
     "/:teacherId",
-    validateSchema({teacherId: {in: "params", required: true, type: "number"}}),
+    param("teacherId").isInt().withMessage("teacherId must be an integer").toInt(),
+    validateRequest,
     asyncHandler(getTeacherById)
 );
 teacherRouter.post(
     "/register",
-    validateSchema({
-        name: {required: true, type: "string"},
-        email: {required: true, type: "string"},
-        password: {required: true, type: "string"},
-    }),
+    body("name").trim().notEmpty().withMessage("name is required"),
+    body("email").trim().notEmpty().withMessage("email is required").isEmail().withMessage("email must be valid"),
+    body("password").notEmpty().withMessage("password is required"),
+    validateRequest,
     asyncHandler(registerTeacher)
 );
 

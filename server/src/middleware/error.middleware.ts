@@ -9,8 +9,6 @@ export function notFoundHandler(request: Request, response: Response) {
 }
 
 export function errorHandler(error: Error, request: Request, response: Response, next: NextFunction) {
-    console.error("Unhandled error:", error);
-
     if (error instanceof AppError) {
         const payload: Record<string, unknown> = {
             status: "error",
