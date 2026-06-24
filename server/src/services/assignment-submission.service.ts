@@ -264,12 +264,21 @@ export async function gradeSubmission(request: Request, response: Response, next
         const submissionId: number = parseInt(<string>request.params.submissionId);
         const {grade} = request.body;
 
-        if (grade === undefined || grade === null) {
-            throw new ValidationError("grade is required");
+        const assignment = await assignmentRepository.findOne({
+            where: {id: assignmentId},
+            relations: {classroom: true},
+        });
+
+        if (!assignment) {
+            throw new NotFoundError("Assignment not found");
         }
 
-        if (typeof grade !== "number" || grade < 0 || grade > 10) {
-            throw new ValidationError("grade must be a number between 0 and 10");
+        if (assignment.minScore && grade < assignment.minScore) {
+            throw new ValidationError("Grade must be greater than or equal to the minimum score");
+        }
+
+        if (grade > assignment.maxScore) {
+            throw new ValidationError("Grade must be less than or equal to the maximum score");
         }
 
         const submission = await assignmentSubmissionRepository.findOne({

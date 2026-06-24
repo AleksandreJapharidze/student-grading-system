@@ -21,13 +21,6 @@ assignmentRouter.get(
     validateRequest,
     asyncHandler(getAssignmentById)
 );
-assignmentRouter.get(
-    "/:assignmentId/submissions",
-    param("assignmentId").isInt().withMessage("assignmentId must be an integer").toInt(),
-    query("studentId").isInt().withMessage("studentId must be an integer").toInt(),
-    validateRequest,
-    asyncHandler(getSubmissionByAssignmentIdAndStudentId)
-);
 assignmentRouter.delete(
     "/:assignmentId",
     param("assignmentId").isInt().withMessage("assignmentId must be an integer").toInt(),
@@ -47,11 +40,18 @@ assignmentRouter.get(
     validateRequest,
     asyncHandler(getSubmissionsByAssignmentId)
 );
+assignmentRouter.get(
+    "/:assignmentId/submissions",
+    param("assignmentId").isInt().withMessage("assignmentId must be an integer").toInt(),
+    query("studentId").isInt().withMessage("studentId must be an integer").toInt(),
+    validateRequest,
+    asyncHandler(getSubmissionByAssignmentIdAndStudentId)
+);
 assignmentRouter.patch(
     "/:assignmentId/submissions/:submissionId/grade",
     param("assignmentId").isInt().withMessage("assignmentId must be an integer").toInt(),
-    param("submissionId").isInt().withMessage("submissionId must be an integer").toInt(),
-    body("grade").isInt({min: 0, max: 10}).withMessage("grade must be an integer between 0 and 10").toInt(),
+    param("submissionId").isInt({min: 0}).withMessage("submissionId must be an integer greater than 0").toInt(),
+    body("grade").isInt().withMessage("grade must be an integer").toInt(),
     validateRequest,
     asyncHandler(gradeSubmission)
 );
