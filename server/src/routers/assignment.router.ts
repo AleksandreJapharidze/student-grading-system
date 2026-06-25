@@ -1,7 +1,8 @@
 import Router from "express";
 import {body, param, query} from "express-validator";
 import {createAssignment, deleteAssignment, getAssignmentById} from "../services/assignment.service";
-import {getSubmissionsByAssignmentId, getSubmissionByAssignmentIdAndStudentId, deleteSubmission, gradeSubmission} from "../services/assignment-submission.service";
+import {getSubmissionsByAssignmentId, getSubmissionByAssignmentIdAndStudentId, deleteSubmission} from "../services/assignment-submission.service";
+import {gradeSubmission} from "../services/grading.service";
 import {asyncHandler} from "../middleware/async-handler";
 import {validateRequest} from "../middleware/validation.middleware";
 
