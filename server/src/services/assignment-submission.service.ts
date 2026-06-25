@@ -83,11 +83,11 @@ export async function getSubmissionsByAssignmentId(request: Request, response: R
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError("Unauthorized");
         }
 
         if (decodedJwt.role !== "teacher") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         const assignmentId: number = parseInt(<string>request.params.assignmentId);
@@ -124,7 +124,7 @@ export async function getSubmissionsByStudentId(request: Request, response: Resp
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError("Unauthorized");
         }
 
         const studentId: number = parseInt(<string>request.params.studentId);
@@ -148,7 +148,7 @@ export async function getSubmissionByAssignmentIdAndStudentId(request: Request, 
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError("Unauthorized");
         }
 
         const assignmentId: number = parseInt(<string>request.params.assignmentId);
@@ -249,64 +249,64 @@ export async function deleteSubmission(request: Request, response: Response, nex
     }
 }
 
-export async function gradeSubmission(request: Request, response: Response, next: NextFunction) {
-    try {
-        const decodedJwt: JwtPayload | null = await verifyToken(request);
-        if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
-        }
+// export async function gradeSubmission(request: Request, response: Response, next: NextFunction) {
+//     try {
+//         const decodedJwt: JwtPayload | null = await verifyToken(request);
+//         if (!decodedJwt) {
+//             return response.status(401).json({message: "Unauthorized"});
+//         }
 
-        if (decodedJwt.role !== "teacher") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
-        }
+//         if (decodedJwt.role !== "teacher") {
+//             return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+//         }
 
-        const assignmentId: number = parseInt(<string>request.params.assignmentId);
-        const submissionId: number = parseInt(<string>request.params.submissionId);
-        const {grade} = request.body;
+//         const assignmentId: number = parseInt(<string>request.params.assignmentId);
+//         const submissionId: number = parseInt(<string>request.params.submissionId);
+//         const {grade} = request.body;
 
-        const assignment = await assignmentRepository.findOne({
-            where: {id: assignmentId},
-            relations: {classroom: true},
-        });
+//         const assignment = await assignmentRepository.findOne({
+//             where: {id: assignmentId},
+//             relations: {classroom: true},
+//         });
 
-        if (!assignment) {
-            throw new NotFoundError("Assignment not found");
-        }
+//         if (!assignment) {
+//             throw new NotFoundError("Assignment not found");
+//         }
 
-        if (assignment.minScore && grade < assignment.minScore) {
-            throw new ValidationError("Grade must be greater than or equal to the minimum score");
-        }
+//         if (assignment.minScore && grade < assignment.minScore) {
+//             throw new ValidationError("Grade must be greater than or equal to the minimum score");
+//         }
 
-        if (grade > assignment.maxScore) {
-            throw new ValidationError("Grade must be less than or equal to the maximum score");
-        }
+//         if (grade > assignment.maxScore) {
+//             throw new ValidationError("Grade must be less than or equal to the maximum score");
+//         }
 
-        const submission = await assignmentSubmissionRepository.findOne({
-            where: {id: submissionId, assignment: {id: assignmentId}},
-            relations: {assignment: {classroom: true}},
-        });
+//         const submission = await assignmentSubmissionRepository.findOne({
+//             where: {id: submissionId, assignment: {id: assignmentId}},
+//             relations: {assignment: {classroom: true}},
+//         });
 
-        if (!submission) {
-            throw new NotFoundError("Submission not found");
-        }
+//         if (!submission) {
+//             throw new NotFoundError("Submission not found");
+//         }
 
-        if (!submission.turnInDate) {
-            throw new ValidationError("Submission has not been turned in");
-        }
+//         if (!submission.turnInDate) {
+//             throw new ValidationError("Submission has not been turned in");
+//         }
 
-        const teacher = await userRepository.findOne({
-            where: {id: decodedJwt.id, role: "teacher"},
-            relations: {classroom: true},
-        });
+//         const teacher = await userRepository.findOne({
+//             where: {id: decodedJwt.id, role: "teacher"},
+//             relations: {classroom: true},
+//         });
 
-        if (!teacher?.classroom || teacher.classroom.id !== submission.assignment.classroom.id) {
-            throw new ForbiddenError("Access denied. You are not in this classroom.");
-        }
+//         if (!teacher?.classroom || teacher.classroom.id !== submission.assignment.classroom.id) {
+//             throw new ForbiddenError("Access denied. You are not in this classroom.");
+//         }
 
-        submission.grade = grade;
-        await assignmentSubmissionRepository.save(submission);
-        return response.status(200).json({message: "Grade updated successfully"});
-    } catch (error) {
-        next(error);
-    }
-}
+//         submission.grade = grade;
+//         await assignmentSubmissionRepository.save(submission);
+//         return response.status(200).json({message: "Grade updated successfully"});
+//     } catch (error) {
+//         next(error);
+//     }
+// }

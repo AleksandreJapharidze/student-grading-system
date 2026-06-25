@@ -1,4 +1,5 @@
 import {NextFunction, Response, Request} from "express";
+import PdfDocument from "pdfkit";
 
 import {assignmentRepository} from "../database/repositories/assignment.repository";
 import {assignmentSubmissionRepository} from "../database/repositories/assignment-submission.repository";
@@ -10,11 +11,11 @@ export async function gradeSubmission(request: Request, response: Response, next
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError("Unauthorized");
         }
 
         if (decodedJwt.role !== "teacher") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         const assignmentId: number = parseInt(<string>request.params.assignmentId);
@@ -70,16 +71,16 @@ export async function gradeSubmission(request: Request, response: Response, next
 
 export async function getTotalFinalGradeForStudent(request: Request, response: Response, next: NextFunction) {
     try {
-        const decodedJwt: JwtPayload | null = await verifyToken(request);
-        if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
-        }
+        // const decodedJwt: JwtPayload | null = await verifyToken(request);
+        // if (!decodedJwt) {
+        //     throw new UnauthorizedError("Unauthorized");
+        // }
 
         const studentId: number = parseInt(<string>request.params.studentId);
 
-        if (decodedJwt.role === "student" && decodedJwt.id !== studentId) {
-            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
-        }
+        // if (decodedJwt.role === "student" && decodedJwt.id !== studentId) {
+        //     throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
+        // }
 
         const assignments = await assignmentRepository.find();
 
@@ -98,8 +99,23 @@ export async function getTotalFinalGradeForStudent(request: Request, response: R
             }
         }
 
-        return response.status(200).json({"studentId": studentId, "totalGrade": totalGrade, "studentTotalGrade": studentTotalGrade});
+        response.setHeader("Content-Type", "application/pdf");
 
+        const passed: boolean = studentTotalGrade !== 0 && totalGrade / studentTotalGrade >= 0.5;
+
+        const pdfDocument = new PdfDocument();
+        pdfDocument.fontSize(20);
+        pdfDocument.text(`Student id: ${studentId}`, 10, 10);
+        pdfDocument.text(`Total grade: ${totalGrade}`, 10, 40);
+        pdfDocument.text(`Student total grade: ${studentTotalGrade}`, 10, 70);
+        if (passed) {
+            pdfDocument.text("This student passed this course successfully", 10, 110);
+        } else {
+            pdfDocument.text("This student failed this course", 10, 110);
+        }
+
+        pdfDocument.pipe(response);
+        pdfDocument.end();
     } catch (error) {
         next(error);
     }
