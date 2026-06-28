@@ -48,8 +48,7 @@ classroomRouter.delete(
 );
 
 classroomRouter.get(
-    "/:classroomId/assignments",
-    param("classroomId").isInt().withMessage("classroomId must be an integer").toInt(),
+    "/assignments",
     validateRequest,
     asyncHandler(getAssignmentsByClassroomId)
 );

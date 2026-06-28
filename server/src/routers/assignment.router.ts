@@ -12,7 +12,7 @@ assignmentRouter.post(
     "/",
     body("task").trim().notEmpty().withMessage("task is required"),
     body("deadline").trim().notEmpty().withMessage("deadline is required"),
-    body("classroomId").isInt().withMessage("classroomId must be an integer").toInt(),
+    body("maxScore").isInt().withMessage("maxScore must be an integer").toInt(),
     validateRequest,
     asyncHandler(createAssignment)
 );

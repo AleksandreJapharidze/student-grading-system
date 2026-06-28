@@ -71,16 +71,16 @@ export async function gradeSubmission(request: Request, response: Response, next
 
 export async function getTotalFinalGradeForStudent(request: Request, response: Response, next: NextFunction) {
     try {
-        // const decodedJwt: JwtPayload | null = await verifyToken(request);
-        // if (!decodedJwt) {
-        //     throw new UnauthorizedError("Unauthorized");
-        // }
+        const decodedJwt: JwtPayload | null = await verifyToken(request);
+        if (!decodedJwt) {
+            throw new UnauthorizedError("Unauthorized");
+        }
 
         const studentId: number = parseInt(<string>request.params.studentId);
 
-        // if (decodedJwt.role === "student" && decodedJwt.id !== studentId) {
-        //     throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
-        // }
+        if (decodedJwt.role === "student" && decodedJwt.id !== studentId) {
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
+        }
 
         const assignments = await assignmentRepository.find();
 

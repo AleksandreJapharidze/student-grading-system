@@ -19,15 +19,21 @@ export async function createAssignment(request: Request, response: Response, nex
             throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
-        const {task, deadline, classroomId} = request.body;
+        const {task, deadline, maxScore} = request.body;
 
-        if (!task || !deadline || !classroomId) {
-            throw new ValidationError("task, deadline, and classroomId are required");
+        let minScore: number | undefined = undefined;
+
+        if (request.body.minScore) {
+            minScore = request.body.minScore;
         }
 
-        const classroom = await classroomRepository.findOne({where: {id: classroomId}});
-        if (!classroom) {
-            throw new NotFoundError("Classroom not found");
+        if (minScore && maxScore && minScore >= maxScore) {
+            throw new ValidationError("minScore must be less than maxScore");
+        }
+
+        const classrooms: ClassroomEntity[] = await classroomRepository.find();
+        if (classrooms.length === 0) {
+            throw new NotFoundError("No classroom found");
         }
 
         const teacher = await userRepository.findOne({
@@ -39,17 +45,23 @@ export async function createAssignment(request: Request, response: Response, nex
             throw new NotFoundError("Teacher not found");
         }
 
-        if (!teacher.classroom || teacher.classroom.id !== classroomId) {
+        if (!teacher.classroom) {
             throw new ForbiddenError("Access denied. You are not in this classroom.");
         }
+
+        const classroom = classrooms[0];
 
         const assignment: AssignmentEntity = assignmentRepository.create({
             task,
             deadline: new Date(deadline),
-            classroom,
+            minScore,
+            maxScore,
+            classroom
         });
 
-        const savedAssignment = await assignmentRepository.save(assignment);
+        console.log(assignment);
+
+        await assignmentRepository.save(assignment);
         return response.status(201).json({message: "Assignment created successfully"});
     } catch (error) {
         next(error);
@@ -58,6 +70,11 @@ export async function createAssignment(request: Request, response: Response, nex
 
 export async function getAssignmentsByClassroomId(request: Request, response: Response, next: NextFunction) {
     try {
+        const decodedJwt: JwtPayload | null = await verifyToken(request);
+        if (!decodedJwt) {
+            throw new UnauthorizedError("Unauthorized");
+        }
+
         const classes: ClassroomEntity[] = await classroomRepository.find();
         if (classes.length === 0) {
             return response.status(404).json({message: "No classroom found"});
@@ -66,6 +83,15 @@ export async function getAssignmentsByClassroomId(request: Request, response: Re
         const classroom: ClassroomEntity | null | undefined = classes[0];
         if (!classroom) {
             return response.status(404).json({message: "Classroom not found"});
+        }
+
+        const user = await userRepository.findOne({
+            where: {id: decodedJwt.id},
+            relations: {classroom: true},
+        });
+
+        if (!user?.classroom) {
+            throw new ForbiddenError("Access denied. You are not in this classroom.");
         }
 
         const classroomId: number = classroom.id;
