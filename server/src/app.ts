@@ -17,6 +17,8 @@ import userRouter from "./routers/user.router";
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware";
 import { submitAssignment } from "./services/assignment-submission.service";
 
+console.log("Environment:", process.env.NODE_ENV);
+
 const app = express();
 
 const corsOptions = {

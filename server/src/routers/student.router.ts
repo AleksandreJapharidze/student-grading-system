@@ -2,7 +2,6 @@ import Router from "express";
 import {body, param} from "express-validator";
 import {getStudentById, getStudents} from "../services/student.service";
 import {registerStudent} from "../services/auth.service";
-import {getSubmissionsByStudentId} from "../services/assignment-submission.service";
 import {getTotalFinalGradeForStudent} from "../services/grading.service";
 
 import {asyncHandler} from "../middleware/async-handler";
@@ -24,13 +23,6 @@ studentRouter.post(
     body("password").notEmpty().withMessage("password is required"),
     validateRequest,
     asyncHandler(registerStudent)
-);
-
-studentRouter.get(
-    "/:studentId/submissions",
-    param("studentId").isInt().withMessage("studentId must be an integer").toInt(),
-    validateRequest,
-    asyncHandler(getSubmissionsByStudentId)
 );
 
 studentRouter.get(

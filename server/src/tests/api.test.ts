@@ -2,6 +2,10 @@ import request from "supertest";
 import app from "../app";
 import { AppDataSource } from "../config/type-orm-config";
 
+if (process.env.NODE_ENV !== "test") {
+    throw new Error("NODE_ENV must be set to 'test'");
+}
+
 const teacherCredentials = {
     email: "test-teacher-email@email.com",
     password: "test-password",

@@ -15,10 +15,6 @@ export async function addStudentToClassroom(request: Request, response: Response
             throw new UnauthorizedError();
         }
 
-        if (!request.params || !request.params.studentId) {
-            throw new ValidationError("studentId is required");
-        }
-
         const studentId: number = parseInt(<string>request.params.studentId)
         if (!accessGranted(decodedJwt)) {
             throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
@@ -55,10 +51,6 @@ export async function addTeacherToClassroom(request: Request, response: Response
             throw new UnauthorizedError();
         }
 
-        if (!request.params || !request.params.teacherId) {
-            throw new ValidationError("teacherId is required");
-        }
-
         const teacherId: number = parseInt(<string>request.params.teacherId)
         if (!accessGranted(decodedJwt)) {
             throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
@@ -93,10 +85,6 @@ export async function removeStudentFromClassroom(request: Request, response: Res
         const decodedJwt = await verifyToken(request);
         if (!decodedJwt) {
             throw new UnauthorizedError();
-        }
-
-        if (!request.params || !request.params.studentId) {
-            throw new ValidationError("studentId is required");
         }
 
         const studentId: number = parseInt(<string>request.params.studentId);
