@@ -38,15 +38,15 @@ assignmentRouter.delete(
 assignmentRouter.get(
     "/:assignmentId/submissions",
     param("assignmentId").isInt().withMessage("assignmentId must be an integer").toInt(),
+    query("studentId").isInt().withMessage("studentId must be an integer").toInt(),
     validateRequest,
-    asyncHandler(getSubmissionsByAssignmentId)
+    asyncHandler(getSubmissionByAssignmentIdAndStudentId)
 );
 assignmentRouter.get(
     "/:assignmentId/submissions",
     param("assignmentId").isInt().withMessage("assignmentId must be an integer").toInt(),
-    query("studentId").isInt().withMessage("studentId must be an integer").toInt(),
     validateRequest,
-    asyncHandler(getSubmissionByAssignmentIdAndStudentId)
+    asyncHandler(getSubmissionsByAssignmentId)
 );
 assignmentRouter.patch(
     "/:assignmentId/submissions/:submissionId/grade",

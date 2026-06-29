@@ -5,3 +5,4 @@ dist/
 *.log
 server/database.sqlite
 server/.env
+server/uploads/

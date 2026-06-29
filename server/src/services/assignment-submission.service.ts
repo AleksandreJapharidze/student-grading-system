@@ -9,6 +9,7 @@ import {userRepository} from "../database/repositories/user.repository";
 import {AssignmentSubmissionEntity} from "../database/models/assignment-submission.entity";
 import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError} from "../errors/app-error";
 import {JwtPayload, verifyToken} from "../util/jwt.util";
+import { SubmissionFilePathEntity } from "../database/models/submission-file-path.entity";
 
 export async function submitAssignment(request: Request, response: Response, next: NextFunction) {
     try {
@@ -130,6 +131,9 @@ export async function getSubmissionByAssignmentIdAndStudentId(request: Request, 
         const assignmentId: number = parseInt(<string>request.params.assignmentId);
         const studentId: number = parseInt(<string>request.query.studentId);
 
+        console.log(decodedJwt.id === studentId);
+        console.log(decodedJwt.role === "student");
+
         if (decodedJwt.id !== studentId || decodedJwt.role !== "student") {
             throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
@@ -194,7 +198,7 @@ export async function deleteSubmission(request: Request, response: Response, nex
 
         const submission = await assignmentSubmissionRepository.findOne({
             where: {id: submissionId},
-            relations: {assignment: true, student: true},
+            relations: {assignment: true, student: true, submissionFilePaths: true},
         });
         
         if (!submission) {
@@ -205,10 +209,9 @@ export async function deleteSubmission(request: Request, response: Response, nex
             throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
-        await assignmentSubmissionRepository.delete(submission.id);
-
+        const filePaths: SubmissionFilePathEntity[] | undefined = submission.submissionFilePaths;
         if (submission.submissionFilePaths !== null && submission.submissionFilePaths !== undefined) {
-            const uploadsDir = path.resolve(__dirname, "..", "uploads");
+            const uploadsDir = path.resolve(__dirname, "..", "..", "uploads");
             for (const submissionFilePath of submission.submissionFilePaths) {
                 const filePath = path.join(uploadsDir, submissionFilePath.path);
 
@@ -217,8 +220,10 @@ export async function deleteSubmission(request: Request, response: Response, nex
                 }
 
                 fs.unlinkSync(filePath);
+                submissionFilePathRepository.delete(submissionFilePath.id);
             }
         }
+        assignmentSubmissionRepository.delete(submission.id);
         return response.status(200).json({message: "Submission deleted successfully"});
     } catch (error) {
         next(error);
