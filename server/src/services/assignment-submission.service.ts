@@ -165,7 +165,7 @@ export async function getSubmissionFileByFileName(request: Request, response: Re
 
         const fileName: string = request.params.fileName as string;
 
-        const filePath = path.join(path.resolve(__dirname, "..", "uploads"), fileName);
+        const filePath = path.join(path.resolve(__dirname, "..", "..", "uploads"), fileName);
 
         if (!fs.existsSync(filePath)) {
             throw new NotFoundError("File not found");
