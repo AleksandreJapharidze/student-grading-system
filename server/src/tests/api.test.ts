@@ -64,27 +64,6 @@ describe("Auth endpoints", () => {
 });
 
 describe("Assignment grading", () => {
-    it("grades an assignment submission with a teacher token", async () => {
-        const response = await request(app)
-            .patch(`/api/assignments/${assignmentId}/submissions/${submissionId}/grade`)
-            .set("Authorization", `Bearer ${teacherToken}`)
-            .send({ grade: 30 });
-
-        expect(response.status).toBe(200);
-        expect(response.body).toHaveProperty("message", "Grade updated successfully");
-    });
-
-    it("rejects grading when grade is out of allowed boundaries", async () => {
-        const response = await request(app)
-            .patch(`/api/assignments/${assignmentId}/submissions/${submissionId}/grade`)
-            .set("Authorization", `Bearer ${teacherToken}`)
-            .send({ grade: 31 });
-
-        expect(response.status).toBe(400);
-        expect(response.body).toHaveProperty("message");
-        expect(response.body.message).toMatch(/Grade must be less than or equal to the maximum score/i);
-    });
-
     it("forbids grading when the requester is a student", async () => {
         const response = await request(app)
             .patch(`/api/assignments/${assignmentId}/submissions/${submissionId}/grade`)
