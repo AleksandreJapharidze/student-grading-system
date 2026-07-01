@@ -2,6 +2,7 @@ import {NextFunction, Response, Request} from "express";
 
 import {userRepository} from "../database/repositories/user.repository"
 import {UserEntity} from "../database/models/user.entity";
+import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError} from "../errors/app-error";
 import {verifyToken} from "../util/jwt.util";
 
 type Teacher = {
@@ -31,18 +32,18 @@ export async function getTeacherById(request: Request, response: Response, next:
         const decodedJwt = await verifyToken(request);
 
         if (!decodedJwt) {
-            return response.status(401).json({message: "Unauthorized"});
+            throw new UnauthorizedError();
         }
 
         const id: number = parseInt(<string>request.params.teacherId);
 
         if (decodedJwt.id !== id || decodedJwt.role !== "teacher") {
-            return response.status(403).json({message: "Access denied. You are not authorized to access this resource."});
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         const teacher: Teacher | null = await userRepository.findOne({where: {id: id, role: "teacher"}});
         if (!teacher) {
-            return response.status(404).json({message: "Teacher not found"});
+            throw new NotFoundError("Teacher not found");
         }
         return response.status(200).json(teacher);
     } catch (error) {

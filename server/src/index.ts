@@ -1,67 +1,64 @@
+import cors from "cors";
 import express, { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
+import path from "path";
+import multer from "multer";
 
-import {createClass, deleteClass, getClass, getClassByUserId} from "./services/classroom.service";
-import {AppDataSource} from "./config/type-orm-config";
-import {createStudent, getStudentById, getStudents, getStudentsByClassroomId} from "./services/student.service";
-import {addStudentToClassroom, addTeacherToClassroom, removeStudentFromClassroom, removeTeacherFromClassroom} from "./services/user.classroom.service";
-import {createTeacher, getTeacherById, getTeachers, getTeachersByClassroomId} from "./services/teacher.service";
-import {login, registerStudent, registerTeacher} from "./services/auth.service";
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-dotenv.config({path: "../.env"});
+import classroomRouter from "./routers/classroom.router";
+import studentRouter from "./routers/student.router";
+import teacherRouter from "./routers/teacher.router";
+import assignmentRoute from "./routers/assignment.router";
+import authRouter from "./routers/auth.router";
+import fileRouter from "./routers/file.router";
+import userRouter from "./routers/user.router";
+
+import { notFoundHandler, errorHandler } from "./middleware/error.middleware";
+import { AppDataSource } from "./config/type-orm-config";
+import { submitAssignment } from "./services/assignment-submission.service";
 
 const app = express();
 
+const corsOptions = {
+    origin: "http://localhost:5173",
+    credentials: true,
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-    console.error(err);
-    res.status(500).send("Something went wrong!");
+const uploadsDir = path.resolve(__dirname, "..", "uploads");
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadsDir);
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + "-" + file.originalname);
+    }
 });
 
-app.post("/api/auth/login", login)
+const upload = multer({ storage: storage });
 
-app.get("/api/students", getStudents);
+app.use("/api/classroom", classroomRouter);
+app.use("/api/students", studentRouter);
+app.use("/api/teachers", teacherRouter);
+app.use("/api/assignments", assignmentRoute);
+app.use("/api/auth", authRouter);
+app.use("/api/users", userRouter);
+app.use("/api/files", fileRouter);
 
-app.get("/api/students/:studentId", getStudentById);
+app.post("/api/assignments/:assignmentId/submissions", upload.array("files"), submitAssignment);
 
-app.post("/api/students", createStudent);
-
-app.post("/api/students/register", registerStudent);
-
-app.get("/api/teachers", getTeachers);
-
-app.get("/api/teachers/:teacherId", getTeacherById);
-
-app.post("api/teachers/register", registerTeacher);
-
-app.get("/api/classroom", getClass);
-
-app.post("/api/classroom", createClass);
-
-app.delete("/api/classroom/", deleteClass)
-
-app.get("/api/classroom/students", getStudentsByClassroomId);
-
-app.get("/api/classroom/teachers", getTeachersByClassroomId);
-
-app.patch("/api/classroom/students/:studentId", addStudentToClassroom);
-
-app.delete("/api/classroom/students/:studentId", removeStudentFromClassroom);
-
-app.patch("/api/classroom/teachers/:teacherId", addTeacherToClassroom);
-
-app.delete("/api/classroom/teachers/:teacherId", removeTeacherFromClassroom);
-
-// This is important! User role doesn't matter when getting classroom, whether it's student or teacher.
-app.get("/api/users/:userId/classroom", getClassByUserId);
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 AppDataSource.initialize()
     .then(() => {
         console.log("Database connected");
-
-        app.listen(3000, () => {
-            console.log("Server is running on port 3000");
+        const port = Number(process.env.PORT) || 3000;
+        app.listen(port, () => {
+            console.log(`Server is running on port ${port}`);
         });
     })
     .catch((err) => {

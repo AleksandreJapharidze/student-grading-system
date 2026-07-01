@@ -13,7 +13,17 @@ export class AssignmentEntity {
     @Column({type: "datetime", nullable: false})
     deadline: Date;
 
-    @ManyToOne(() => ClassroomEntity, classroom => classroom.assignments)
+    @Column({type: "integer", nullable: true})
+    minScore: number;
+
+    @Column({type: "integer", nullable: false})
+    maxScore: number;
+
+    @ManyToOne(() => ClassroomEntity, classroom => classroom.assignments, {
+        nullable: false,
+        onDelete: "CASCADE",
+        eager: false
+    })
     @JoinColumn({ name: "classroomId" })
     classroom: ClassroomEntity;
 

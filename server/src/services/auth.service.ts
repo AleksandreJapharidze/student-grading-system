@@ -3,6 +3,7 @@ import bcrypt from "bcrypt"
 
 import {userRepository} from "../database/repositories/user.repository";
 import {UserEntity} from "../database/models/user.entity";
+import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError} from "../errors/app-error";
 
 import {generateToken} from "../util/jwt.util";
 
@@ -11,12 +12,20 @@ export async function registerStudent(request: Request, response: Response, next
         const {name} = request.body;
         const {email} = request.body;
 
+        if (!name || !email) {
+            throw new ValidationError("Name and email are required");
+        }
+
         const studentExists: UserEntity | null = await userRepository.findOne({where: {email: email}});
         if (studentExists) {
-            return response.status(400).json({message: "User with this email is already registered"});
+            throw new ValidationError("User with this email is already registered");
         }
 
         const {password} = request.body;
+
+        if (!password) {
+            throw new ValidationError("Password is required");
+        }
 
         const hashedPassword: string = await bcrypt.hash(password, 10);
         const newStudent: UserEntity = userRepository.create({name, email, password: hashedPassword, role: "student"});
@@ -33,14 +42,18 @@ export async function login(request: Request, response: Response, next: NextFunc
         const {email} = request.body;
         const {password} = request.body;
 
+        if (!email || !password) {
+            throw new ValidationError("Email and password are required");
+        }
+
         const user: UserEntity | null = await userRepository.findOne({where: {email: email}, select: {id: true, email: true, password: true, role: true}});
         if (!user) {
-            return response.status(401).json({message: "Invalid email. User not found"});
+            throw new UnauthorizedError("Invalid email. User not found");
         }
 
         const isPasswordValid: boolean = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return response.status(401).json({message: "Invalid password"});
+            throw new UnauthorizedError("Invalid password");
         }
 
         const token: string = await generateToken({id: user.id, email: user.email, role: user.role});
@@ -56,12 +69,20 @@ export async function registerTeacher(request: Request, response: Response, next
         const {name} = request.body;
         const {email} = request.body;
 
+        if (!name || !email) {
+            throw new ValidationError("Name and email are required");
+        }
+
         const teacherExists: UserEntity | null = await userRepository.findOne({where: {email: email}});
         if (teacherExists) {
-            return response.status(400).json({message: "User with this email is already registered"});
+            throw new ValidationError("User with this email is already registered");
         }
 
         const {password} = request.body;
+
+        if (!password) {
+            throw new ValidationError("Password is required");
+        }
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const newTeacher: UserEntity = userRepository.create({name, email, password: hashedPassword, role: "teacher"});
