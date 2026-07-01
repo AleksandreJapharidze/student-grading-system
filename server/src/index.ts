@@ -3,6 +3,7 @@ import express, { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import path from "path";
 import multer from "multer";
+import fs from "fs";
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
@@ -28,6 +29,10 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 const uploadsDir = path.resolve(__dirname, "..", "uploads");
+
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+}
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
