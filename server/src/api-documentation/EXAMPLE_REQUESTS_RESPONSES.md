@@ -402,7 +402,7 @@ Authorization: Bearer <token>
 ---
 
 ### DELETE /api/classroom
-**Purpose:** Remove all classroom records.
+**Purpose:** Remove all classroom records. Only admins can delete classrooms.
 
 **Request Headers:**
 ```
@@ -412,6 +412,22 @@ Authorization: Bearer <token>
 **Response (204 No Content):**
 ```
 (No response body)
+```
+
+**Response (401 Unauthorized):**
+```json
+{
+  "status": "error",
+  "message": "Unauthorized"
+}
+```
+
+**Response (403 Forbidden):**
+```json
+{
+  "status": "error",
+  "message": "Access denied. You are not authorized to access this resource."
+}
 ```
 
 ---
@@ -970,7 +986,7 @@ Authorization: Bearer <token>
 ---
 
 ### POST /api/assignments/:assignmentId/submissions
-**Purpose:** Submit assignment files. Expects `multipart/form-data` with files under the field name `files`.
+**Purpose:** Submit assignment files. Expects `multipart/form-data` with files under the field name `files`. Only `student` belonging to the classroom may submit files.
 
 **Request Headers:**
 ```
@@ -1038,6 +1054,14 @@ Files: [homework.pdf, solution.docx]
 }
 ```
 
+**Response (422 Unprocessable Entity):**
+```json
+{
+  "status": "error",
+  "message": "Assignment deadline has passed"
+}
+```
+
 ---
 
 ### DELETE /api/assignments/:assignmentId/submissions/:submissionId
@@ -1076,6 +1100,14 @@ Authorization: Bearer <token>
 {
   "status": "error",
   "message": "Submission not found"
+}
+```
+
+**Response (422 Unprocessable Entity):**
+```json
+{
+  "status": "error",
+  "message": "Assignment deadline has passed. You cannot delete this submission."
 }
 ```
 
@@ -1149,6 +1181,14 @@ Content-Type: application/json
 {
   "status": "error",
   "message": "Submission not found"
+}
+```
+
+**Response (422 Unprocessable Entity):**
+```json
+{
+  "status": "error",
+  "message": "You are grading too early. Deadline has not passed yet."
 }
 ```
 

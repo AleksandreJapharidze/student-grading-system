@@ -1,6 +1,6 @@
 import {NextFunction, Response, Request} from "express";
 
-import {classroomRepository} from "../database/repositories/classroom.repository"
+import {classroomRepository} from "../database/repositories/classroom.repository";
 import {ClassroomEntity} from "../database/models/classroom.entity";
 import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError} from "../errors/app-error";
 import {JwtPayload, verifyToken} from "../util/jwt.util";
@@ -91,6 +91,15 @@ export async function getClassByUserId(request: Request, response: Response, nex
 
 export async function deleteClass(request: Request, response: Response, next: NextFunction) {
     try {
+        const decodedJwt: JwtPayload | null = await verifyToken(request);
+        if (!decodedJwt) {
+            throw new UnauthorizedError();
+        }
+
+        if (decodedJwt.role !== "admin") {
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
+        }
+        
         await classroomRepository.clear();
         return response.status(204).end();
     } catch (error) {

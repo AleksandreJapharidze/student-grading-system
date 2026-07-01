@@ -125,7 +125,9 @@
 
 - **DELETE /api/classroom**
   - **Purpose:** Remove all classroom records.
-  - **Responses:** `204 No Content`
+  - **Responses:**
+    - `204 No Content`
+    - `401/403` — if not authenticated or not allowed
 
 - **GET /api/classroom/students** and **GET /api/classroom/teachers**
   - **Purpose:** Return lists of students/teachers assigned to the classroom. No request params.
@@ -193,6 +195,7 @@
     - `201 Created` `{ message: "Assignment submitted successfully" }`
     - `400 Validation` — if no files uploaded or student already submitted
     - `401/403/404` — if unauthorized, not student, or assignment/student not found
+    - `422` if assignment deadline has passed
 
 - **DELETE /api/assignments/:assignmentId/submissions/:submissionId**
   - **Purpose:** Delete a submission and its stored files. Only the submitting `student` may delete their submission.
@@ -200,6 +203,7 @@
   - **Responses:**
     - `200 OK` `{ message: "Submission deleted successfully" }`
     - `401/403/404` as appropriate
+    - `422` if assignment deadline has passed
 
 - **PATCH /api/assignments/:assignmentId/submissions/:submissionId/grade**
   - **Purpose:** Grade a student's submission. Only `teacher` who belongs to the classroom may grade.
@@ -208,6 +212,7 @@
     - `200 OK` `{ message: "Grade updated successfully" }`
     - `400 Validation` if grade outside allowed range or submission not turned in
     - `401/403/404` for authentication/permission/missing resources
+    - `422` when assignment deadline has not passed yet
 
 **Files**
 
