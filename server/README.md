@@ -2,5 +2,10 @@
 ### 1. cd server
 ### 2. npm install
 ### 3. tsc
-### 4. cd dist
-### 5. node index.js
+### 4. npm start
+
+## To run the tests, clone the repository the same way as above, but execute the following commands:
+### 1. cd server
+### 2. npm install
+### 3. tsc
+### 4. npm test

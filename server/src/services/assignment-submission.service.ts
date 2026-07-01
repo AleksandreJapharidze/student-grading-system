@@ -7,7 +7,7 @@ import {assignmentSubmissionRepository} from "../database/repositories/assignmen
 import {submissionFilePathRepository} from "../database/repositories/submission-file-path.repository";
 import {userRepository} from "../database/repositories/user.repository";
 import {AssignmentSubmissionEntity} from "../database/models/assignment-submission.entity";
-import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError} from "../errors/app-error";
+import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, UnprocessableEntityError} from "../errors/app-error";
 import {JwtPayload, verifyToken} from "../util/jwt.util";
 import { SubmissionFilePathEntity } from "../database/models/submission-file-path.entity";
 
@@ -49,14 +49,13 @@ export async function submitAssignment(request: Request, response: Response, nex
             },
         });
 
+        if (assignment.deadline < new Date()) {
+            clearSubmissionFiles(files);
+            throw new UnprocessableEntityError("Assignment deadline has passed");
+        }
+
         if (submissionExists) {
-            const uploadsDir = path.resolve(__dirname, "..", "uploads");
-            for (const file of files) {
-                const filePath = path.join(uploadsDir, file.filename);
-                if (fs.existsSync(filePath)) {
-                    fs.unlinkSync(filePath);
-                }
-            }
+            clearSubmissionFiles(files);
             throw new ValidationError("You have already submitted this assignment");
         }
 
@@ -202,14 +201,17 @@ export async function deleteSubmission(request: Request, response: Response, nex
         });
         
         if (!submission) {
-            return response.status(404).json({message: "Submission not found"});
+            throw new NotFoundError("Submission not found");
         }
 
         if (!submission.student || submission.student.id !== decodedJwt.id) {
             throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
-        const filePaths: SubmissionFilePathEntity[] | undefined = submission.submissionFilePaths;
+        if (submission.assignment.deadline < new Date()) {
+            throw new UnprocessableEntityError("Assignment deadline has passed. You cannot delete this submission.");
+        }
+
         if (submission.submissionFilePaths !== null && submission.submissionFilePaths !== undefined) {
             const uploadsDir = path.resolve(__dirname, "..", "..", "uploads");
             for (const submissionFilePath of submission.submissionFilePaths) {
@@ -227,5 +229,15 @@ export async function deleteSubmission(request: Request, response: Response, nex
         return response.status(200).json({message: "Submission deleted successfully"});
     } catch (error) {
         next(error);
+    }
+}
+
+async function clearSubmissionFiles(files: Express.Multer.File[]) {
+    const uploadsDir = path.resolve(__dirname, "..", "..", "uploads");
+    for (const file of files) {
+        const filePath = path.join(uploadsDir, file.filename);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
     }
 }
