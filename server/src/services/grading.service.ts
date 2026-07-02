@@ -82,11 +82,16 @@ export async function getTotalFinalGradeForStudent(request: Request, response: R
 
         const studentId: number = parseInt(<string>request.params.studentId);
 
-        if (decodedJwt.role === "student" && decodedJwt.id !== studentId) {
+        if (decodedJwt.role !== "teacher" && decodedJwt.role !== "admin") {
             throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
         const assignments = await assignmentRepository.find();
+        const student = await userRepository.findOne({where: {id: studentId}});
+
+        if (!student) {
+            throw new NotFoundError("Student not found");
+        }
 
         let totalGrade: number = 0;
         let studentTotalGrade: number = 0;
@@ -110,12 +115,13 @@ export async function getTotalFinalGradeForStudent(request: Request, response: R
         const pdfDocument = new PdfDocument();
         pdfDocument.fontSize(20);
         pdfDocument.text(`Student id: ${studentId}`, 10, 10);
-        pdfDocument.text(`Total grade: ${totalGrade}`, 10, 40);
-        pdfDocument.text(`Student total grade: ${studentTotalGrade}`, 10, 70);
+        pdfDocument.text(`Student name: ${student.name}`, 10, 40);
+        pdfDocument.text(`Total grade: ${totalGrade}`, 10, 70);
+        pdfDocument.text(`Student total grade: ${studentTotalGrade}`, 10, 110);
         if (passed) {
-            pdfDocument.text("This student passed this course successfully", 10, 110);
+            pdfDocument.text("This student passed this course successfully", 10, 140);
         } else {
-            pdfDocument.text("This student failed this course", 10, 110);
+            pdfDocument.text("This student failed this course", 10, 140);
         }
 
         pdfDocument.pipe(response);
