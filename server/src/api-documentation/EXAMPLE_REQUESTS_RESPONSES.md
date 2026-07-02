@@ -876,7 +876,7 @@ Authorization: Bearer <token>
     "submissionFilePaths": [
       {
         "id": 1,
-        "filePath": "1705318200000-calculator.js"
+        "filePath": "https://<project>.supabase.co/storage/v1/object/public/students-submissions/1705318200000-homework.pdf"
       }
     ],
     "student": {
@@ -893,11 +893,11 @@ Authorization: Bearer <token>
     "submissionFilePaths": [
       {
         "id": 2,
-        "filePath": "1705395600000-calculator.js"
+        "filePath": "https://<project>.supabase.co/storage/v1/object/public/students-submissions/1705395600000-homework.png"
       },
       {
         "id": 3,
-        "filePath": "1705395600001-tests.js"
+        "filePath": "https://<project>.supabase.co/storage/v1/object/public/students-submissions/1705395600001-tests.txt"
       }
     ],
     "student": {
@@ -953,7 +953,7 @@ Authorization: Bearer <token>
   "submissionFilePaths": [
     {
       "id": 1,
-      "filePath": "1705318200000-calculator.js"
+      "filePath": "https://<project>.supabase.co/storage/v1/object/public/students-submissions/1705318200000-homework.pdf"
     }
   ]
 }
@@ -997,7 +997,7 @@ Content-Type: multipart/form-data
 **Request Form Data:**
 ```
 Field Name: files
-Files: [homework.pdf, solution.docx]
+Files: [homework.pdf, homework.png]
 ```
 
 **Response (201 Created):**
@@ -1194,43 +1194,7 @@ Content-Type: application/json
 
 ---
 
-## 6. Files
-
-### GET /api/files/:fileName
-**Purpose:** Download a previously uploaded submission file. Requires authentication.
-
-**Request Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Response (200 OK):**
-```
-Content-Type: application/octet-stream
-Content-Disposition: attachment; filename="calculator.js"
-
-[Binary file content]
-```
-
-**Response (401 Unauthorized):**
-```json
-{
-  "status": "error",
-  "message": "Unauthorized"
-}
-```
-
-**Response (404 Not Found):**
-```json
-{
-  "status": "error",
-  "message": "File not found"
-}
-```
-
----
-
-## 7. User Helpers
+## 6. User Helpers
 
 ### GET /api/users/:userId/classroom
 **Purpose:** Return classroom information for the provided user id. Requires authentication and `userId` must match the authenticated user's id.
@@ -1274,7 +1238,7 @@ Authorization: Bearer <token>
 
 ---
 
-## Summary of All 29 Endpoints
+## Summary of All 27 Endpoints
 
 | # | Method | Endpoint | Description |
 |---|--------|----------|-------------|
@@ -1304,5 +1268,4 @@ Authorization: Bearer <token>
 | 24 | POST | /api/assignments/:assignmentId/submissions | Submit assignment files |
 | 25 | DELETE | /api/assignments/:assignmentId/submissions/:submissionId | Delete submission |
 | 26 | PATCH | /api/assignments/:assignmentId/submissions/:submissionId/grade | Grade a submission |
-| 27 | GET | /api/files/:fileName | Download submission file |
-| 28 | GET | /api/users/:userId/classroom | Get classroom for user |
+| 27 | GET | /api/users/:userId/classroom | Get classroom for user |

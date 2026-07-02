@@ -1,6 +1,8 @@
 import {NextFunction, Response, Request} from "express";
 import fs from "fs";
+import fsPromises from "fs/promises";
 import path from "path";
+import { supabase } from "../config/supabase.confg";
 
 import {assignmentRepository} from "../database/repositories/assignment.repository";
 import {assignmentSubmissionRepository} from "../database/repositories/assignment-submission.repository";
@@ -50,16 +52,12 @@ export async function submitAssignment(request: Request, response: Response, nex
         });
 
         if (assignment.deadline < new Date()) {
-            clearSubmissionFiles(files);
             throw new UnprocessableEntityError("Assignment deadline has passed");
         }
 
         if (submissionExists) {
-            clearSubmissionFiles(files);
             throw new ValidationError("You have already submitted this assignment");
         }
-
-        const filePaths = files.map(file => file.filename);
 
         const submission = assignmentSubmissionRepository.create({
             assignment,
@@ -68,13 +66,37 @@ export async function submitAssignment(request: Request, response: Response, nex
 
         const savedSubmission = await assignmentSubmissionRepository.save(submission);
 
-        const submissionFilePaths = filePaths.map(filePath => submissionFilePathRepository.create({ path: filePath, submission: savedSubmission }));
+        const bucket = process.env.SUPABASE_BUCKET;
+        if (!bucket) {
+            throw new Error("SUPABASE_BUCKET not found");
+        }
+        const publicUrls = [];
+
+        for (const file of files) {
+            const fileData = await fsPromises.readFile(file.path);
+
+            const { error } = await supabase.storage.from(bucket).upload(file.filename, fileData);
+            if (error) {
+                throw new Error(error.message);
+            }
+
+            const { data } = await supabase.storage.from(bucket).getPublicUrl(file.filename);
+            publicUrls.push(data.publicUrl);
+        }
+
+        const submissionFilePaths = publicUrls.map(publicUrl => submissionFilePathRepository.create({ path: publicUrl, submission: savedSubmission }));
+        
         await submissionFilePathRepository.save(submissionFilePaths);
 
         savedSubmission.submissionFilePaths = submissionFilePaths;
         await assignmentSubmissionRepository.save(savedSubmission);
+        clearSubmissionFiles(files);
         return response.status(201).json({ message: "Assignment submitted successfully" });
     } catch (error) {
+        const files = request.files as Express.Multer.File[];
+        if (files && files.length > 0) {
+            clearSubmissionFiles(files);
+        }
         next(error)
     }
 }
@@ -152,32 +174,6 @@ export async function getSubmissionByAssignmentIdAndStudentId(request: Request, 
     }
 }
 
-export async function getSubmissionFileByFileName(request: Request, response: Response, next: NextFunction) {
-    try {
-        const decodedJwt: JwtPayload | null = await verifyToken(request);
-        if (!decodedJwt) {
-            throw new UnauthorizedError();
-        }
-
-        if (!request.params || !request.params.fileName) {
-            throw new ValidationError("fileName is required");
-        }
-
-        const fileName: string = request.params.fileName as string;
-
-        const filePath = path.join(path.resolve(__dirname, "..", "..", "uploads"), fileName);
-
-        if (!fs.existsSync(filePath)) {
-            throw new NotFoundError("File not found");
-        }
-        
-        return response.status(200).sendFile(filePath);
-    } catch (error) {
-        console.log("Unexpected error:", error);
-        next(error);
-    }
-}
-
 export async function deleteSubmission(request: Request, response: Response, next: NextFunction) {
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);
@@ -213,16 +209,15 @@ export async function deleteSubmission(request: Request, response: Response, nex
         }
 
         if (submission.submissionFilePaths !== null && submission.submissionFilePaths !== undefined) {
-            const uploadsDir = path.resolve(__dirname, "..", "..", "uploads");
-            for (const submissionFilePath of submission.submissionFilePaths) {
-                const filePath = path.join(uploadsDir, submissionFilePath.path);
-
-                if (!fs.existsSync(filePath)) {
-                    throw new NotFoundError("File not found");
+            const filePaths = submission.submissionFilePaths;
+            for (const filePath of filePaths) {
+                const lastSlashIndex = filePath.path.lastIndexOf("/");
+                const fileName = filePath.path.substring(lastSlashIndex + 1);
+                const { error } = await supabase.storage.from("students-submissions").remove([fileName]);
+                if (error) {
+                    throw new Error(error.message);
                 }
-
-                fs.unlinkSync(filePath);
-                submissionFilePathRepository.delete(submissionFilePath.id);
+                await submissionFilePathRepository.delete(filePath.id);
             }
         }
         assignmentSubmissionRepository.delete(submission.id);

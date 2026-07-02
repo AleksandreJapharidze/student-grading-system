@@ -1,6 +1,6 @@
+import dotenv from "dotenv";
 import cors from "cors";
 import express, { Request, Response, NextFunction } from "express";
-import dotenv from "dotenv";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
@@ -12,7 +12,6 @@ import studentRouter from "./routers/student.router";
 import teacherRouter from "./routers/teacher.router";
 import assignmentRoute from "./routers/assignment.router";
 import authRouter from "./routers/auth.router";
-import fileRouter from "./routers/file.router";
 import userRouter from "./routers/user.router";
 
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware";
@@ -61,7 +60,6 @@ app.use("/api/teachers", teacherRouter);
 app.use("/api/assignments", assignmentRoute);
 app.use("/api/auth", authRouter);
 app.use("/api/users", userRouter);
-app.use("/api/files", fileRouter);
 
 app.post("/api/assignments/:assignmentId/submissions", upload.array("files"), submitAssignment);
 
