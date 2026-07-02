@@ -12,7 +12,8 @@ assignmentRouter.post(
     "/",
     body("task").trim().notEmpty().withMessage("task is required"),
     body("deadline").trim().notEmpty().withMessage("deadline is required"),
-    body("maxScore").isInt().withMessage("maxScore must be an integer").toInt(),
+    body("maxScore").isInt({ min: 1 }).withMessage("maxScore must be a positive integer").toInt(),
+    body("minScore").optional().isInt({ min: 0 }).withMessage("minScore must be a non-negative integer").toInt(),
     validateRequest,
     asyncHandler(createAssignment)
 );

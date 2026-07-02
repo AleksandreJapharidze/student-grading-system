@@ -1,9 +1,65 @@
-const BASE = "http://localhost:3001/api";
+const BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 const getToken = () => localStorage.getItem("token") || "";
+
+const clearSession = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("role");
+  localStorage.removeItem("userId");
+};
+
+const authFetch = (url: string, options: RequestInit = {}) => {
+  const token = getToken();
+  if (!token) {
+    clearSession();
+    window.location.href = "/login";
+    return Promise.reject(new Error("Not authenticated"));
+  }
+
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
+  }).then(async r => {
+    if (r.status === 401) {
+      clearSession();
+      window.location.href = "/login";
+      throw new Error("Session expired. Please sign in again.");
+    }
+    return r;
+  });
+};
+
+const authFormFetch = (url: string, options: RequestInit = {}) => {
+  const token = getToken();
+  if (!token) {
+    clearSession();
+    window.location.href = "/login";
+    return Promise.reject(new Error("Not authenticated"));
+  }
+
+  return fetch(url, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
+  }).then(async r => {
+    if (r.status === 401) {
+      clearSession();
+      window.location.href = "/login";
+      throw new Error("Session expired. Please sign in again.");
+    }
+    return r;
+  });
+};
+
 const authHeaders = () => ({
   "Content-Type": "application/json",
-  "Authorization": `Bearer ${getToken()}`
+  Authorization: `Bearer ${getToken()}`,
 });
 
 export const api = {
@@ -30,59 +86,116 @@ export const api = {
     }).then(r => r.json()),
 
   // Students
-  getStudents: () => fetch(`${BASE}/students`, { headers: authHeaders() }).then(r => r.json()),
+  getStudents: () => authFetch(`${BASE}/students`).then(r => r.json()),
 
   // Teachers
-  getTeachers: () => fetch(`${BASE}/teachers`, { headers: authHeaders() }).then(r => r.json()),
+  getTeachers: () => authFetch(`${BASE}/teachers`).then(r => r.json()),
 
   // Classroom
-  getClassroom: () => fetch(`${BASE}/classroom`, { headers: authHeaders() }).then(r => {
+  getClassroom: () => authFetch(`${BASE}/classroom`).then(r => {
     if (!r.ok) throw new Error("No classroom");
     return r.json();
   }),
   createClassroom: (name: string) =>
-    fetch(`${BASE}/classroom`, {
+    authFetch(`${BASE}/classroom`, {
       method: "POST",
-      headers: authHeaders(),
       body: JSON.stringify({ name }),
     }).then(r => r.json()),
-  getClassroomStudents: () => fetch(`${BASE}/classroom/students`, { headers: authHeaders() }).then(r => r.json()),
-  getClassroomTeachers: () => fetch(`${BASE}/classroom/teachers`, { headers: authHeaders() }).then(r => r.json()),
+  getClassroomStudents: () => authFetch(`${BASE}/classroom/students`).then(r => r.json()),
+  getClassroomTeachers: () => authFetch(`${BASE}/classroom/teachers`).then(r => r.json()),
   addStudentToClassroom: (id: number) =>
-    fetch(`${BASE}/classroom/students/${id}`, { method: "PATCH", headers: authHeaders() }).then(r => r.text()),
+    authFetch(`${BASE}/classroom/students/${id}`, { method: "PATCH" }).then(r => r.text()),
   removeStudentFromClassroom: (id: number) =>
-    fetch(`${BASE}/classroom/students/${id}`, { method: "DELETE", headers: authHeaders() }).then(r => r.text()),
+    authFetch(`${BASE}/classroom/students/${id}`, { method: "DELETE" }).then(r => r.text()),
   addTeacherToClassroom: (id: number) =>
-    fetch(`${BASE}/classroom/teachers/${id}`, { method: "PATCH", headers: authHeaders() }).then(r => r.text()),
+    authFetch(`${BASE}/classroom/teachers/${id}`, { method: "PATCH" }).then(r => r.text()),
   removeTeacherFromClassroom: (id: number) =>
-    fetch(`${BASE}/classroom/teachers/${id}`, { method: "DELETE", headers: authHeaders() }).then(r => r.text()),
+    authFetch(`${BASE}/classroom/teachers/${id}`, { method: "DELETE" }).then(r => r.text()),
 
   // Assignments
-  getAssignments: () => fetch(`${BASE}/classroom/assignments`, { headers: authHeaders() }).then(r => r.json()),
-  createAssignment: (data: { task: string; deadline: string; classroomId: number }) =>
-    fetch(`${BASE}/assignments`, {
+  getAssignments: () => authFetch(`${BASE}/classroom/assignments`).then(r => r.json()),
+  createAssignment: (data: { task: string; deadline: string; minScore?: number; maxScore: number }) =>
+    authFetch(`${BASE}/assignments`, {
       method: "POST",
-      headers: authHeaders(),
       body: JSON.stringify(data),
-    }).then(r => r.json()),
+    }).then(async r => {
+      const body = await r.json();
+      if (!r.ok) throw new Error(body.message || "Could not create assignment");
+      return body;
+    }),
   deleteAssignment: (id: number) =>
-    fetch(`${BASE}/assignments/${id}`, { method: "DELETE", headers: authHeaders() }),
+    authFetch(`${BASE}/assignments/${id}`, { method: "DELETE" }),
 
-  // Submissions
-  submitAssignment: (assignmentId: number, content: string) =>
-    fetch(`${BASE}/assignments/${assignmentId}/submissions`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({ content }),
-    }).then(r => r.json()),
+  // Submissions — files must use multipart/form-data with key "files"
+  submitAssignment: async (assignmentId: number, data: { content?: string; files?: File[] }) => {
+    const content = data.content?.trim() ?? "";
+    const files = data.files ?? [];
+
+    if (!content && files.length === 0) {
+      throw new Error("Write something, attach a file, or both before submitting.");
+    }
+
+    let response: Response;
+
+    if (files.length > 0) {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("files", file);
+      }
+      if (content) {
+        formData.append("content", content);
+      }
+      response = await authFormFetch(`${BASE}/assignments/${assignmentId}/submissions`, {
+        method: "POST",
+        body: formData,
+      });
+    } else {
+      response = await authFetch(`${BASE}/assignments/${assignmentId}/submissions`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
+      });
+    }
+
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.message || "Submission failed");
+    return body;
+  },
   getSubmissions: (assignmentId: number) =>
-    fetch(`${BASE}/assignments/${assignmentId}/submissions`, { headers: authHeaders() }).then(r => r.json()),
-  gradeSubmission: (assignmentId: number, submissionId: number, grade: number) =>
-    fetch(`${BASE}/assignments/${assignmentId}/submissions/${submissionId}/grade`, {
+    authFetch(`${BASE}/assignments/${assignmentId}/submissions`).then(r => r.json()),
+  getMySubmission: async (assignmentId: number, studentId: number) => {
+    const token = getToken();
+    if (!token) {
+      clearSession();
+      window.location.href = "/login";
+      throw new Error("Not authenticated");
+    }
+
+    const r = await fetch(
+      `${BASE}/assignments/${assignmentId}/submissions?studentId=${studentId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (r.status === 401) {
+      clearSession();
+      window.location.href = "/login";
+      throw new Error("Session expired. Please sign in again.");
+    }
+
+    const body = await r.json();
+    if (!r.ok) throw new Error(body.message || "Could not load submission");
+
+    if (body === null || body.submission === null) return null;
+    return body.submission ?? body;
+  },
+  gradeSubmission: async (assignmentId: number, submissionId: number, grade: number) => {
+    const r = await authFetch(`${BASE}/assignments/${assignmentId}/submissions/${submissionId}/grade`, {
       method: "PATCH",
-      headers: authHeaders(),
       body: JSON.stringify({ grade }),
-    }).then(r => r.json()),
+    });
+    const body = await r.json();
+    if (!r.ok) throw new Error(body.message || "Could not save grade");
+    return body;
+  },
   getMySubmissions: (studentId: number) =>
-    fetch(`${BASE}/students/${studentId}/submissions`, { headers: authHeaders() }).then(r => r.json()),
+    authFetch(`${BASE}/students/${studentId}/submissions`).then(r => r.json()),
 };

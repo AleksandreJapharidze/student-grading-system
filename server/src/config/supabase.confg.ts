@@ -1,10 +1,15 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let client: SupabaseClient | null = null;
 
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-    throw new Error('Supabase URL or Service Role Key not found');
+export function getSupabase(): SupabaseClient {
+  if (!client) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      throw new Error("Supabase URL or Service Role Key not found");
+    }
+    client = createClient(supabaseUrl, supabaseServiceRoleKey);
+  }
+  return client;
 }
-
-export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);

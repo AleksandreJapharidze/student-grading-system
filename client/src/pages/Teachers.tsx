@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
+import { UserCheck } from "lucide-react";
 import { api } from "../api";
+import EmptyState from "../components/EmptyState";
 
 export default function Teachers() {
   const [teachers, setTeachers] = useState<any[]>([]);
   const [classroomTeachers, setClassroomTeachers] = useState<any[]>([]);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
+  const isAdmin = localStorage.getItem("role") === "admin";
 
   const load = () => {
     api.getTeachers().then(setTeachers).catch(() => {});
@@ -14,15 +14,6 @@ export default function Teachers() {
   };
 
   useEffect(() => { load(); }, []);
-
-  const handleCreate = async () => {
-    if (!name || !email) return setMessage("Please fill in all fields.");
-    await api.createTeacher({ name, email });
-    setName("");
-    setEmail("");
-    setMessage("Teacher created!");
-    load();
-  };
 
   const isInClassroom = (id: number) => classroomTeachers.some(t => t.id === id);
 
@@ -37,31 +28,43 @@ export default function Teachers() {
 
   return (
     <div>
-      <h2>Teachers</h2>
-
-      <div className="form">
-        <label>Name</label>
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="Jane Smith" />
-        <label>Email</label>
-        <input value={email} onChange={e => setEmail(e.target.value)} placeholder="jane@email.com" />
-        {message && <p className="success">{message}</p>}
-        <button className="btn btn-primary" onClick={handleCreate}>Add Teacher</button>
+      <div className="page-header page-header--coral">
+        <h2>Colleagues</h2>
+        <p>
+          {isAdmin
+            ? "Add or remove teachers from the classroom."
+            : "View the teachers who share your classroom."}
+        </p>
       </div>
 
-      {teachers.length === 0 && <p className="empty">No teachers yet.</p>}
+      {teachers.length === 0 && (
+        <EmptyState
+          icon={UserCheck}
+          title="No colleagues yet"
+          description="Colleagues will appear here once they register."
+          tone="coral"
+        />
+      )}
 
       {teachers.map(teacher => (
         <div className="card" key={teacher.id}>
           <div className="card-info">
-            <h3>{teacher.name} <span className="tag">{isInClassroom(teacher.id) ? "In Classroom" : "Not Assigned"}</span></h3>
+            <h3>
+              {teacher.name}
+              <span className={`tag ${isInClassroom(teacher.id) ? "tag-green" : "tag-muted"}`}>
+                {isInClassroom(teacher.id) ? "In your class" : "Not in class yet"}
+              </span>
+            </h3>
             <p>{teacher.email}</p>
           </div>
-          <button
-            className={`btn ${isInClassroom(teacher.id) ? "btn-danger" : "btn-success"}`}
-            onClick={() => handleToggle(teacher)}
-          >
-            {isInClassroom(teacher.id) ? "Remove" : "Add to Class"}
-          </button>
+          {isAdmin && (
+            <button
+              className={`btn ${isInClassroom(teacher.id) ? "btn-danger" : "btn-success"}`}
+              onClick={() => handleToggle(teacher)}
+            >
+              {isInClassroom(teacher.id) ? "Remove from class" : "Add to class"}
+            </button>
+          )}
         </div>
       ))}
     </div>

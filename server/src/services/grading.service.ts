@@ -4,7 +4,7 @@ import PdfDocument from "pdfkit";
 import {assignmentRepository} from "../database/repositories/assignment.repository";
 import {assignmentSubmissionRepository} from "../database/repositories/assignment-submission.repository";
 import {userRepository} from "../database/repositories/user.repository";
-import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, UnprocessableEntityError} from "../errors/app-error";
+import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError} from "../errors/app-error";
 import {JwtPayload, verifyToken} from "../util/jwt.util";
 
 export async function gradeSubmission(request: Request, response: Response, next: NextFunction) {
@@ -31,11 +31,7 @@ export async function gradeSubmission(request: Request, response: Response, next
             throw new NotFoundError("Assignment not found");
         }
 
-        if (assignment.deadline > new Date()) {
-            throw new UnprocessableEntityError("You are grading too early. Deadline has not passed yet.");
-        }
-
-        if (assignment.minScore && grade < assignment.minScore) {
+        if (assignment.minScore != null && grade < assignment.minScore) {
             throw new ValidationError("Grade must be greater than or equal to the minimum score");
         }
 

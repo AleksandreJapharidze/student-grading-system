@@ -13,7 +13,7 @@ export async function generateToken(payload: JwtPayload) {
         throw new Error("JWT_SECRET_STRING is not defined in the environment variables");
     }
 
-    return jwt.sign(payload, jwtSecret, {expiresIn: "5m"})
+    return jwt.sign(payload, jwtSecret, {expiresIn: "24h"})
 }
 
 export async function verifyToken(request: Request) {

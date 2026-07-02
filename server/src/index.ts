@@ -16,24 +16,22 @@ import userRouter from "./routers/user.router";
 
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware";
 import { AppDataSource } from "./config/type-orm-config";
+import { seedAdmin } from "./database/seed-admin";
 import { submitAssignment } from "./services/assignment-submission.service";
 
 const app = express();
 
 const allowedOrigins = [
     "http://localhost:5173",
-    "http://localhost:3000"
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
 ];
 
 app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error("Not allowed by CORS"));
-        }
-    },
-    credentials: true
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
 }));
 app.use(express.json());
 
@@ -61,15 +59,27 @@ app.use("/api/assignments", assignmentRoute);
 app.use("/api/auth", authRouter);
 app.use("/api/users", userRouter);
 
-app.post("/api/assignments/:assignmentId/submissions", upload.array("files"), submitAssignment);
+app.post(
+    "/api/assignments/:assignmentId/submissions",
+    (request, response, next) => {
+        if (request.is("multipart/form-data")) {
+            return upload.array("files")(request, response, next);
+        }
+        next();
+    },
+    submitAssignment
+);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
 
 AppDataSource.initialize()
-    .then(() => {
+    .then(async () => {
         console.log("Database connected");
-        const port = Number(process.env.PORT) || 3000;
+        if (process.env.NODE_ENV !== "test") {
+            await seedAdmin();
+        }
+        const port = Number(process.env.PORT) || 4000;
         app.listen(port, () => {
             console.log(`Server is running on port ${port}`);
         });
