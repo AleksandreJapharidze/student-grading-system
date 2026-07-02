@@ -7,6 +7,8 @@ import {AssignmentEntity} from "../database/models/assignment.entity";
 import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError} from "../errors/app-error";
 import {JwtPayload, verifyToken} from "../util/jwt.util";
 import {ClassroomEntity} from "../database/models/classroom.entity";
+import {assignmentSubmissionRepository} from "../database/repositories/assignment-submission.repository";
+import {deleteFilesFromSupabase} from "../util/submission-storage.util";
 
 export async function createAssignment(request: Request, response: Response, next: NextFunction) {
     try {
@@ -136,7 +138,7 @@ export async function deleteAssignment(request: Request, response: Response, nex
         const assignmentId: number = parseInt(<string>request.params.assignmentId);
         const assignment: AssignmentEntity | null = await assignmentRepository.findOne({
             where: {id: assignmentId},
-            relations: {classroom: true},
+            relations: {classroom: true, submissions: {submissionFilePaths: true}},
         });
 
         if (!assignment) {
@@ -150,6 +152,14 @@ export async function deleteAssignment(request: Request, response: Response, nex
 
         if (!teacher?.classroom || teacher.classroom.id !== assignment.classroom.id) {
             throw new ForbiddenError("Access denied. You are not in this classroom.");
+        }
+
+        const submissions = assignment.submissions ?? [];
+
+        for (const submission of submissions) {
+            const paths = submission.submissionFilePaths?.map(filePath => filePath.path) ?? [];
+            await deleteFilesFromSupabase(paths);
+            await assignmentSubmissionRepository.remove(submission);
         }
 
         await assignmentRepository.remove(assignment);

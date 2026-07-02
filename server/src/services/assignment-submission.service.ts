@@ -2,7 +2,7 @@ import {NextFunction, Response, Request} from "express";
 import fs from "fs";
 import fsPromises from "fs/promises";
 import path from "path";
-import { supabase } from "../config/supabase.confg";
+import { getSupabase } from "../config/supabase.confg";
 
 import {assignmentRepository} from "../database/repositories/assignment.repository";
 import {assignmentSubmissionRepository} from "../database/repositories/assignment-submission.repository";
@@ -11,7 +11,7 @@ import {userRepository} from "../database/repositories/user.repository";
 import {AssignmentSubmissionEntity} from "../database/models/assignment-submission.entity";
 import {ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, UnprocessableEntityError} from "../errors/app-error";
 import {JwtPayload, verifyToken} from "../util/jwt.util";
-import { SubmissionFilePathEntity } from "../database/models/submission-file-path.entity";
+import { deleteFilesFromSupabase, formatSubmissionFilePaths } from "../util/submission-storage.util";
 
 export async function submitAssignment(request: Request, response: Response, next: NextFunction) {
     try {
@@ -29,6 +29,12 @@ export async function submitAssignment(request: Request, response: Response, nex
         }
 
         const assignmentId: number = parseInt(<string>request.params.assignmentId);
+        const content = typeof request.body?.content === "string" ? request.body.content.trim() : "";
+        const files = (request.files as Express.Multer.File[] | undefined) ?? [];
+
+        if (!content && files.length === 0) {
+            throw new ValidationError("Submit written work, attach a file, or both.");
+        }
 
         const assignment = await assignmentRepository.findOne({ where: { id: assignmentId }, relations: { classroom: true } });
         if (!assignment) throw new NotFoundError("Assignment not found");
@@ -39,10 +45,6 @@ export async function submitAssignment(request: Request, response: Response, nex
         if (!student.classroom || student.classroom.id !== assignment.classroom.id) {
             throw new ForbiddenError("Access denied. You are not in this classroom.");
         }
-
-        if (!request.files || request.files.length === 0) throw new ValidationError("No files uploaded");
-
-        const files = request.files as Express.Multer.File[];
 
         const submissionExists = await assignmentSubmissionRepository.findOne({
             where: {
@@ -61,37 +63,71 @@ export async function submitAssignment(request: Request, response: Response, nex
 
         const submission = assignmentSubmissionRepository.create({
             assignment,
-            student
+            student,
+            content: content || null,
         });
 
         const savedSubmission = await assignmentSubmissionRepository.save(submission);
 
-        const bucket = process.env.SUPABASE_BUCKET;
-        if (!bucket) {
-            throw new Error("SUPABASE_BUCKET not found");
-        }
-        const publicUrls = [];
-
-        for (const file of files) {
-            const fileData = await fsPromises.readFile(file.path);
-
-            const { error } = await supabase.storage.from(bucket).upload(file.filename, fileData);
-            if (error) {
-                throw new Error(error.message);
+        if (files.length > 0) {
+            const bucket = process.env.SUPABASE_BUCKET;
+            if (!bucket) {
+                await assignmentSubmissionRepository.delete(savedSubmission.id);
+                throw new Error("SUPABASE_BUCKET not found");
             }
 
-            const { data } = await supabase.storage.from(bucket).getPublicUrl(file.filename);
-            publicUrls.push(data.publicUrl);
+            try {
+                const savedFilePaths = [];
+
+                for (const file of files) {
+                    const fileData = await fsPromises.readFile(file.path);
+
+                    const { error } = await getSupabase().storage.from(bucket).upload(file.filename, fileData, {
+                        contentType: file.mimetype || "application/octet-stream",
+                        upsert: false,
+                    });
+                    if (error) {
+                        throw new Error(error.message);
+                    }
+
+                    savedFilePaths.push(
+                        submissionFilePathRepository.create({ path: file.filename, submission: savedSubmission })
+                    );
+                }
+
+                const submissionFilePaths = await submissionFilePathRepository.save(savedFilePaths);
+
+                savedSubmission.submissionFilePaths = submissionFilePaths;
+                await assignmentSubmissionRepository.save(savedSubmission);
+                clearSubmissionFiles(files);
+
+                return response.status(201).json({
+                    message: "Assignment submitted successfully",
+                    submission: {
+                        id: savedSubmission.id,
+                        content: savedSubmission.content,
+                        turnInDate: savedSubmission.turnInDate,
+                        grade: savedSubmission.grade,
+                        submissionFilePaths: formatSubmissionFilePaths(submissionFilePaths),
+                    },
+                });
+            } catch (uploadError) {
+                await assignmentSubmissionRepository.delete(savedSubmission.id);
+                clearSubmissionFiles(files);
+                throw uploadError;
+            }
         }
 
-        const submissionFilePaths = publicUrls.map(publicUrl => submissionFilePathRepository.create({ path: publicUrl, submission: savedSubmission }));
-        
-        await submissionFilePathRepository.save(submissionFilePaths);
-
-        savedSubmission.submissionFilePaths = submissionFilePaths;
-        await assignmentSubmissionRepository.save(savedSubmission);
-        clearSubmissionFiles(files);
-        return response.status(201).json({ message: "Assignment submitted successfully" });
+        return response.status(201).json({
+            message: "Assignment submitted successfully",
+            submission: {
+                id: savedSubmission.id,
+                content: savedSubmission.content,
+                turnInDate: savedSubmission.turnInDate,
+                grade: savedSubmission.grade,
+                submissionFilePaths: [],
+            },
+        });
     } catch (error) {
         const files = request.files as Express.Multer.File[];
         if (files && files.length > 0) {
@@ -133,10 +169,15 @@ export async function getSubmissionsByAssignmentId(request: Request, response: R
 
         const submissions: AssignmentSubmissionEntity[] = await assignmentSubmissionRepository.find({
             where: {assignment: {id: assignmentId}},
-            relations: {student: true},
+            relations: {student: true, submissionFilePaths: true},
         });
 
-        return response.status(200).json(submissions);
+        return response.status(200).json(
+            submissions.map(submission => ({
+                ...submission,
+                submissionFilePaths: formatSubmissionFilePaths(submission.submissionFilePaths ?? []),
+            }))
+        );
     } catch (error) {
         next(error);
     }
@@ -161,14 +202,24 @@ export async function getSubmissionByAssignmentIdAndStudentId(request: Request, 
 
         const submission = await assignmentSubmissionRepository.findOne({
             where: {assignment: {id: assignmentId}, student: {id: studentId}},
-            relations: {assignment: true, student: true},
+            relations: {assignment: true, student: true, submissionFilePaths: true},
         });
 
         if (!submission) {
-            throw new NotFoundError("Submission not found");
+            return response.status(200).json({
+                submission: null,
+            });
         }
 
-        return response.status(200).json({ id: submission.id, turnInDate: submission.turnInDate, grade: submission.grade, submissionFilePaths: submission.submissionFilePaths });
+        return response.status(200).json({
+            submission: {
+                id: submission.id,
+                turnInDate: submission.turnInDate,
+                grade: submission.grade,
+                content: submission.content,
+                submissionFilePaths: formatSubmissionFilePaths(submission.submissionFilePaths ?? []),
+            },
+        });
     } catch (error) {
         next(error);
     }
@@ -208,19 +259,11 @@ export async function deleteSubmission(request: Request, response: Response, nex
             throw new UnprocessableEntityError("Assignment deadline has passed. You cannot delete this submission.");
         }
 
-        if (submission.submissionFilePaths !== null && submission.submissionFilePaths !== undefined) {
-            const filePaths = submission.submissionFilePaths;
-            for (const filePath of filePaths) {
-                const lastSlashIndex = filePath.path.lastIndexOf("/");
-                const fileName = filePath.path.substring(lastSlashIndex + 1);
-                const { error } = await supabase.storage.from("students-submissions").remove([fileName]);
-                if (error) {
-                    throw new Error(error.message);
-                }
-                await submissionFilePathRepository.delete(filePath.id);
-            }
+        if (submission.submissionFilePaths?.length) {
+            await deleteFilesFromSupabase(submission.submissionFilePaths.map(filePath => filePath.path));
         }
-        assignmentSubmissionRepository.delete(submission.id);
+
+        await assignmentSubmissionRepository.remove(submission);
         return response.status(200).json({message: "Submission deleted successfully"});
     } catch (error) {
         next(error);

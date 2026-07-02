@@ -16,6 +16,9 @@ export class AssignmentSubmissionEntity {
     @Column({nullable: true, type: "integer"})
     grade: number | null
 
+    @Column({nullable: true, type: "text"})
+    content: string | null
+
     @OneToMany(() => SubmissionFilePathEntity, filePath => filePath.submission, {
         eager: true
     })

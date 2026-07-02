@@ -52,7 +52,7 @@ export async function addTeacherToClassroom(request: Request, response: Response
         }
 
         const teacherId: number = parseInt(<string>request.params.teacherId)
-        if (!accessGranted(decodedJwt)) {
+        if (!adminAccessGranted(decodedJwt)) {
             throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
@@ -122,7 +122,7 @@ export async function removeTeacherFromClassroom(request: Request, response: Res
         }
 
         const teacherId: number = parseInt(<string>request.params.teacherId);
-        if (!accessGranted(decodedJwt)) {
+        if (!adminAccessGranted(decodedJwt)) {
             throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
         }
 
@@ -146,4 +146,8 @@ export async function removeTeacherFromClassroom(request: Request, response: Res
 
 function accessGranted(decodedJwt: JwtPayload) {
     return decodedJwt.role === "teacher" || decodedJwt.role === "admin";
+}
+
+function adminAccessGranted(decodedJwt: JwtPayload) {
+    return decodedJwt.role === "admin";
 }
