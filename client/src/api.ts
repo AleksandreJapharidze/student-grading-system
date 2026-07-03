@@ -57,10 +57,10 @@ const authFormFetch = (url: string, options: RequestInit = {}) => {
   });
 };
 
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${getToken()}`,
-});
+// const authHeaders = () => ({
+//   "Content-Type": "application/json",
+//   Authorization: `Bearer ${getToken()}`,
+// });
 
 export const api = {
   // Auth
