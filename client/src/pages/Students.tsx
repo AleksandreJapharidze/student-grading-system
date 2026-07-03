@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { Users } from "lucide-react";
+import { TrendingUp, Users } from "lucide-react";
 import { api } from "../api";
 import EmptyState from "../components/EmptyState";
+import ProgressChart from "../components/ProgressChart";
 
 export default function Students() {
   const [students, setStudents] = useState<any[]>([]);
   const [classroomStudents, setClassroomStudents] = useState<any[]>([]);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const load = () => {
     api.getStudents().then(setStudents).catch(() => {});
@@ -42,22 +44,42 @@ export default function Students() {
       )}
 
       {students.map(student => (
-        <div className="card" key={student.id}>
-          <div className="card-info">
-            <h3>
-              {student.name}
-              <span className={`tag ${isInClassroom(student.id) ? "tag-green" : "tag-muted"}`}>
-                {isInClassroom(student.id) ? "In your class" : "Not in class yet"}
-              </span>
-            </h3>
-            <p>{student.email}</p>
+        <div className="card-stack" key={student.id}>
+          <div className="card">
+            <div className="card-info">
+              <h3>
+                {student.name}
+                <span className={`tag ${isInClassroom(student.id) ? "tag-green" : "tag-muted"}`}>
+                  {isInClassroom(student.id) ? "In your class" : "Not in class yet"}
+                </span>
+              </h3>
+              <p>{student.email}</p>
+            </div>
+            <div className="btn-group">
+              {isInClassroom(student.id) && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setExpandedId(prev => (prev === student.id ? null : student.id))}
+                >
+                  <TrendingUp size={15} strokeWidth={2} aria-hidden />
+                  {expandedId === student.id ? "Hide progress" : "View progress"}
+                </button>
+              )}
+              <button
+                className={`btn ${isInClassroom(student.id) ? "btn-danger" : "btn-success"}`}
+                onClick={() => handleToggle(student)}
+              >
+                {isInClassroom(student.id) ? "Remove from class" : "Add to class"}
+              </button>
+            </div>
           </div>
-          <button
-            className={`btn ${isInClassroom(student.id) ? "btn-danger" : "btn-success"}`}
-            onClick={() => handleToggle(student)}
-          >
-            {isInClassroom(student.id) ? "Remove from class" : "Add to class"}
-          </button>
+
+          {expandedId === student.id && (
+            <div className="card-panel">
+              <p className="card-panel-title">Grade trend</p>
+              <ProgressChart studentId={student.id} />
+            </div>
+          )}
         </div>
       ))}
     </div>

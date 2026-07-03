@@ -53,10 +53,6 @@ export async function submitAssignment(request: Request, response: Response, nex
             },
         });
 
-        if (assignment.deadline < new Date()) {
-            throw new UnprocessableEntityError("Assignment deadline has passed");
-        }
-
         if (submissionExists) {
             throw new ValidationError("You have already submitted this assignment");
         }
@@ -68,6 +64,7 @@ export async function submitAssignment(request: Request, response: Response, nex
         });
 
         const savedSubmission = await assignmentSubmissionRepository.save(submission);
+        const isLate = savedSubmission.turnInDate > assignment.deadline;
 
         if (files.length > 0) {
             const bucket = process.env.SUPABASE_BUCKET;
@@ -102,12 +99,13 @@ export async function submitAssignment(request: Request, response: Response, nex
                 clearSubmissionFiles(files);
 
                 return response.status(201).json({
-                    message: "Assignment submitted successfully",
+                    message: isLate ? "Assignment submitted successfully, but after the deadline" : "Assignment submitted successfully",
                     submission: {
                         id: savedSubmission.id,
                         content: savedSubmission.content,
                         turnInDate: savedSubmission.turnInDate,
                         grade: savedSubmission.grade,
+                        isLate,
                         submissionFilePaths: formatSubmissionFilePaths(submissionFilePaths),
                     },
                 });
@@ -119,12 +117,13 @@ export async function submitAssignment(request: Request, response: Response, nex
         }
 
         return response.status(201).json({
-            message: "Assignment submitted successfully",
+            message: isLate ? "Assignment submitted successfully, but after the deadline" : "Assignment submitted successfully",
             submission: {
                 id: savedSubmission.id,
                 content: savedSubmission.content,
                 turnInDate: savedSubmission.turnInDate,
                 grade: savedSubmission.grade,
+                isLate,
                 submissionFilePaths: [],
             },
         });
@@ -175,6 +174,7 @@ export async function getSubmissionsByAssignmentId(request: Request, response: R
         return response.status(200).json(
             submissions.map(submission => ({
                 ...submission,
+                isLate: submission.turnInDate > assignment.deadline,
                 submissionFilePaths: formatSubmissionFilePaths(submission.submissionFilePaths ?? []),
             }))
         );
@@ -217,6 +217,7 @@ export async function getSubmissionByAssignmentIdAndStudentId(request: Request, 
                 turnInDate: submission.turnInDate,
                 grade: submission.grade,
                 content: submission.content,
+                isLate: submission.turnInDate > submission.assignment.deadline,
                 submissionFilePaths: formatSubmissionFilePaths(submission.submissionFilePaths ?? []),
             },
         });

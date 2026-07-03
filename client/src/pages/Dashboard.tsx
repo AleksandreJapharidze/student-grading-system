@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, ClipboardList, Plus, Users } from "lucide-react";
+import { ChevronRight, ClipboardList, Plus, TrendingUp, Users } from "lucide-react";
 import { api } from "../api";
 import EmptyState from "../components/EmptyState";
+import ProgressChart from "../components/ProgressChart";
 
 type Assignment = { id: number; task: string; deadline: string };
 type Person = { id: number; name: string; email: string };
@@ -72,6 +73,21 @@ function buildSummary(
 
 const STATUS_LABEL = { overdue: "Overdue", soon: "Due soon", later: "Upcoming" } as const;
 
+function getUserId() {
+  const stored = localStorage.getItem("userId");
+  if (stored) return Number(stored);
+
+  const token = localStorage.getItem("token");
+  if (!token) return 0;
+
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return Number(payload.id);
+  } catch {
+    return 0;
+  }
+}
+
 export default function Dashboard() {
   const [students, setStudents] = useState<Person[]>([]);
   const [teachers, setTeachers] = useState<Person[]>([]);
@@ -80,6 +96,7 @@ export default function Dashboard() {
 
   const role = localStorage.getItem("role");
   const isTeacher = role === "teacher";
+  const userId = getUserId();
 
   useEffect(() => {
     api.getStudents().then(d => Array.isArray(d) ? setStudents(d) : {}).catch(() => {});
@@ -115,6 +132,18 @@ export default function Dashboard() {
             </Link>
           )}
         </header>
+
+        {!isTeacher && userId > 0 && (
+          <section className="panel panel--progress">
+            <div className="panel-head panel-head--indigo">
+              <h2 className="panel-title">
+                <TrendingUp size={16} strokeWidth={2} aria-hidden style={{ marginRight: "0.4rem", verticalAlign: "-2px" }} />
+                Your grade trend
+              </h2>
+            </div>
+            <ProgressChart studentId={userId} />
+          </section>
+        )}
 
         <div className={`dash-grid${isTeacher ? " dash-grid--split" : ""}`}>
           <section className="panel panel--assignments">
