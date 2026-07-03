@@ -26,8 +26,7 @@ A full-stack gradebook application for classrooms. Teachers can create assignmen
 ## Live Links
 
 - Backend API: https://student-grading-system-nxfc.onrender.com/
-- Frontend: _TODO — not deployed yet_
-- Figma: _TODO — no Figma file yet_
+- Frontend: https://student-grading-system-z1dz-i3e7brqqb.vercel.app/
 
 ## Team
 
