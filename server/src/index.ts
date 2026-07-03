@@ -25,7 +25,10 @@ const allowedOrigins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
-    "student-grading-system-z1dz.vercel.app",
+    "https://student-grading-system-nxfc.onrender.com",
+    "https://student-grading-system-z1dz-student-grading-dashboard-team.vercel.app",
+    "https://student-grading-syste-git-e5eb1e-student-grading-dashboard-team.vercel.app",
+    "https://student-grading-system-z1dz-i3e7brqqb.vercel.app"
 ];
 
 app.use(cors({
