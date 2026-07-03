@@ -1,8 +1,0 @@
-node_modules/
-dist/
-.idea/
-.DS_Store
-*.log
-server/database.sqlite
-server/uploads
-server/.env
