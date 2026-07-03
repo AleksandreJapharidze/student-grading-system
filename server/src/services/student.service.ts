@@ -53,23 +53,6 @@ export async function getStudentById(request: Request, response: Response, next:
     }
 }
 
-export async function createStudent(request: Request, response: Response, next: NextFunction) {
-    try {
-        const student: StudentRequest = request.body;
-
-        const studentExists: Student | null = await userRepository.findOne({where: {email: student.email}});
-        if (studentExists) {
-            throw new ValidationError("User with this email is already registered");
-        }
-
-        const newStudent: UserEntity = userRepository.create(student);
-        const savedStudent: UserEntity = await userRepository.save(newStudent);
-        return response.status(201).json(savedStudent);
-    } catch (error) {
-        next(error);
-    }
-}
-
 export async function getStudentsByClassroomId(request: Request, response: Response, next: NextFunction) {
     try {
         const classroomId: number = 1;

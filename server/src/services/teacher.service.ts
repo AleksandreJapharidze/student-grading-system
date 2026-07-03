@@ -49,18 +49,7 @@ export async function getTeacherById(request: Request, response: Response, next:
     } catch (error) {
         next(error);
     }
-}
-
-export async function createTeacher(request: Request, response: Response, next: NextFunction) {
-    try {
-        const teacher: TeacherRequest = request.body;
-        const newTeacher: UserEntity = userRepository.create(teacher);
-        const savedTeacher: UserEntity = await userRepository.save(newTeacher);
-        return response.status(201).json(savedTeacher);
-    } catch (error) {
-        next(error);
-    }
-}
+}   
 
 export async function getTeachersByClassroomId(request: Request, response: Response, next: NextFunction) {
     try {

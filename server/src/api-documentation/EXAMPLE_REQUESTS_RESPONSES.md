@@ -168,7 +168,7 @@ Authorization: Bearer <token>
 ---
 
 ### GET /api/students/:studentId/final-grade
-**Purpose:** Generates and returns a PDF report with the student's total/final grade.
+**Purpose:** Generates and returns a PDF report with the student's total/final grade. Only "teacher" can access this.
 
 **Request Headers:**
 ```
