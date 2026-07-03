@@ -198,4 +198,8 @@ export const api = {
   },
   getMySubmissions: (studentId: number) =>
     authFetch(`${BASE}/students/${studentId}/submissions`).then(r => r.json()),
+
+  // Progress
+  getStudentProgress: (studentId: number) =>
+    authFetch(`${BASE}/students/${studentId}/progress`).then(r => r.json()),
 };

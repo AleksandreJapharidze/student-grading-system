@@ -69,6 +69,52 @@ export async function gradeSubmission(request: Request, response: Response, next
     }
 }
 
+export async function getStudentProgress(request: Request, response: Response, next: NextFunction) {
+    try {
+        const decodedJwt: JwtPayload | null = await verifyToken(request);
+        if (!decodedJwt) {
+            throw new UnauthorizedError("Unauthorized");
+        }
+
+        const studentId: number = parseInt(<string>request.params.studentId);
+
+        const isSelf = decodedJwt.role === "student" && decodedJwt.id === studentId;
+        const isStaff = decodedJwt.role === "teacher" || decodedJwt.role === "admin";
+
+        if (!isSelf && !isStaff) {
+            throw new ForbiddenError("Access denied. You are not authorized to access this resource.");
+        }
+
+        const student = await userRepository.findOne({where: {id: studentId, role: "student"}});
+        if (!student) {
+            throw new NotFoundError("Student not found");
+        }
+
+        const submissions = await assignmentSubmissionRepository.find({
+            where: {student: {id: studentId}},
+            relations: {assignment: true},
+        });
+
+        const progress = submissions
+            .filter(submission => submission.grade != null)
+            .map(submission => ({
+                assignmentId: submission.assignment.id,
+                task: submission.assignment.task,
+                turnInDate: submission.turnInDate,
+                deadline: submission.assignment.deadline,
+                grade: submission.grade,
+                maxScore: submission.assignment.maxScore,
+                percentage: Math.round((Number(submission.grade) / submission.assignment.maxScore) * 100),
+                isLate: submission.turnInDate > submission.assignment.deadline,
+            }))
+            .sort((a, b) => new Date(a.turnInDate).getTime() - new Date(b.turnInDate).getTime());
+
+        return response.status(200).json(progress);
+    } catch (error) {
+        next(error);
+    }
+}
+
 export async function getTotalFinalGradeForStudent(request: Request, response: Response, next: NextFunction) {
     try {
         const decodedJwt: JwtPayload | null = await verifyToken(request);

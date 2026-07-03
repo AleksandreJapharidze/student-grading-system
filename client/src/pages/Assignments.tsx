@@ -356,6 +356,7 @@ export default function Assignments() {
               <p className="card-panel-title">Your submission</p>
               <p className="submission-meta">
                 Turned in {new Date(mySubmissions[a.id].turnInDate).toLocaleString()}
+                {mySubmissions[a.id].isLate && <span className="tag tag-red" style={{ marginLeft: "0.5rem" }}>Late</span>}
               </p>
               {mySubmissions[a.id].content?.trim() ? (
                 <p className="submission-content">{mySubmissions[a.id].content}</p>
@@ -447,7 +448,10 @@ export default function Assignments() {
               {submissions.map(s => (
                 <div className="card" key={s.id} style={{ flexDirection: "column", alignItems: "flex-start" }}>
                   <div className="card-info" style={{ marginBottom: "0.8rem", width: "100%" }}>
-                    <h3>{s.student?.name ?? "Unknown student"}</h3>
+                    <h3>
+                      {s.student?.name ?? "Unknown student"}
+                      {s.isLate && <span className="tag tag-red">Late</span>}
+                    </h3>
                     <p>{s.content?.trim() || "No written response submitted."}</p>
                     <SubmissionFiles files={s.submissionFilePaths ?? []} showEmpty />
                     <p style={{ marginTop: "0.4rem" }}>
