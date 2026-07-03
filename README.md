@@ -33,9 +33,9 @@ A full-stack gradebook application for classrooms. Teachers can create assignmen
 
 | Name | GitHub Username |
 |---|---|
-| Anzor Tsiskarishvili | AleksandreJapharidze |
+| Anzor Tsiskarishvili | adzoi |
 | Zurab Chanturidze | zurabchanturidze |
-| Aleksandre Japharidze | adzoi |
+| Aleksandre Japharidze | AleksandreJapharidze |
 
 ## Setup
 
