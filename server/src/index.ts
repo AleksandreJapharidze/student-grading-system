@@ -29,7 +29,7 @@ const allowedOrigins = [
     "https://student-grading-system-z1dz-student-grading-dashboard-team.vercel.app",
     "https://student-grading-syste-git-e5eb1e-student-grading-dashboard-team.vercel.app",
     "https://student-grading-system-z1dz-i3e7brqqb.vercel.app",
-    "https://student-grading-system-lovat.vercel.app/"
+    "https://student-grading-system-lovat.vercel.app"
 ];
 
 app.use(cors({
